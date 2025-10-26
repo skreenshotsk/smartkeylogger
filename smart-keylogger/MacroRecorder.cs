@@ -67,7 +67,8 @@ public class MacroRecorder
             KeyCode.VcQuote => 0xDE,    // '
             // Другие
             KeyCode.VcPrintScreen => 0x2C, // Print Screen
-
+            KeyCode.VcLeftMeta => 0x5B,
+            KeyCode.VcRightMeta => 0x5C,
             // По умолчанию оставляем как есть
             _ => (int)sharpHookKeyCode
         };
