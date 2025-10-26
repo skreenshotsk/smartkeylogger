@@ -1,5 +1,5 @@
 ﻿# smartkeylogger
-# smartkeylogger
+cd smart-keylogger
 START: dotnet run
 
 1 - 2 - 3 - 4
@@ -7,4 +7,5 @@ START: dotnet run
 stop to record "Enter"
 
 Exit Ctrl+c
-# 123
+
+
