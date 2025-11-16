@@ -1,6 +1,10 @@
+// Modified MacroRecorder.cs - с фильтрацией горячих клавиш
 using SharpHook;
-using SharpHook.Data;
 using SharpHook.Native;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 public class MacroRecorder
 {
@@ -8,6 +12,16 @@ public class MacroRecorder
     private List<InputEvent> recordedEvents = new List<InputEvent>();
     private bool isRecording = false;
     private DateTime recordingStartTime;
+
+    // Список кодов горячих клавиш которые нужно игнорировать
+    private HashSet<int> ignoredKeyCodes = new HashSet<int>
+    {
+        0x70, // F9
+        0x71, // F10  
+        0x72, // F11
+        0x73, // F12
+        0x1B  // Escape
+    };
 
     // Конвертер кодов прямо внутри класса
     private int SharpHookToVirtualKey(KeyCode sharpHookKeyCode)
@@ -153,9 +167,16 @@ public class MacroRecorder
     {
         if (!isRecording) return;
         
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
+        
+        // Пропускаем горячие клавиши
+        if (ignoredKeyCodes.Contains(virtualKeyCode))
+        {
+            Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
+            return;
+        }
+        
+        TimeSpan elapsed = DateTime.Now - recordingStartTime;
         
         recordedEvents.Add(new InputEvent
         {
@@ -172,9 +193,15 @@ public class MacroRecorder
     {
         if (!isRecording) return;
         
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
+        
+        // Пропускаем горячие клавиши
+        if (ignoredKeyCodes.Contains(virtualKeyCode))
+        {
+            return;
+        }
+        
+        TimeSpan elapsed = DateTime.Now - recordingStartTime;
         
         recordedEvents.Add(new InputEvent
         {
@@ -189,15 +216,19 @@ public class MacroRecorder
     {
         try
         {
+            // Фильтруем события горячих клавиш на всякий случай
+            var filteredEvents = recordedEvents.Where(e => 
+                e.EventType != "KeyPress" || !ignoredKeyCodes.Contains(e.KeyCode)).ToList();
+
             var options = new System.Text.Json.JsonSerializerOptions 
             { 
                 WriteIndented = true,
                 PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
             };
             
-            string json = System.Text.Json.JsonSerializer.Serialize(recordedEvents, options);
+            string json = System.Text.Json.JsonSerializer.Serialize(filteredEvents, options);
             File.WriteAllText(filename, json);
-            Console.WriteLine($"Макрос сохранен в файл: {filename} ({recordedEvents.Count} событий)");
+            Console.WriteLine($"Макрос сохранен в файл: {filename} ({filteredEvents.Count} событий)");
         }
         catch (Exception ex)
         {
@@ -229,4 +260,15 @@ public class MacroRecorder
             return null;
         }
     }
+
+    // Метод для добавления игнорируемых клавиш
+    public void AddIgnoredKey(int keyCode)
+    {
+        ignoredKeyCodes.Add(keyCode);
+    }
+
+    public int GetRecordedEventsCount()
+{
+    return recordedEvents.Count;
+}
 }

@@ -1,31 +1,21 @@
 {
   "version": 3,
   "targets": {
-    "net6.0": {
-      "InputSimulator/1.0.4": {
+    "net6.0-windows7.0": {
+      "SharpHook/5.3.0": {
         "type": "package",
         "compile": {
-          "lib/net20/WindowsInput.dll": {
+          "lib/net6.0/SharpHook.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net20/WindowsInput.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "SharpHook/7.0.2": {
-        "type": "package",
-        "compile": {
-          "lib/netstandard2.0/SharpHook.dll": {
+          "lib/net6.0/SharpHook.dll": {
             "related": ".xml"
           }
         },
-        "runtime": {
-          "lib/netstandard2.0/SharpHook.dll": {
-            "related": ".xml"
-          }
+        "build": {
+          "build/SharpHook.targets": {}
         },
         "runtimeTargets": {
           "runtimes/linux-arm/native/libuiohook.so": {
@@ -73,39 +63,24 @@
     }
   },
   "libraries": {
-    "InputSimulator/1.0.4": {
-      "sha512": "D0LvRCPQMX6/FJHBjng+RO+wRDuHTJrfo7IAc7rmkPvRqchdVGJWg3y70peOtDy3OLNK+HSOwVkH4GiuLnkKgA==",
+    "SharpHook/5.3.0": {
+      "sha512": "3WIKP6gtUp7EF/5fWz347tgnlb2WOQNggrKtTyQrjhZLchvWqXDQEkw10Trf3RqPh9wk+O4PTVF1Z+qqTiWc9Q==",
       "type": "package",
-      "path": "inputsimulator/1.0.4",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "inputsimulator.1.0.4.nupkg.sha512",
-        "inputsimulator.nuspec",
-        "lib/net20/WindowsInput.dll",
-        "lib/net20/WindowsInput.xml"
-      ]
-    },
-    "SharpHook/7.0.2": {
-      "sha512": "u1hMy69u7vd12R2VLR1G0mulVaZjQxR0pzwmFqsbeGkEUzoy7tyveIrwhDfKLb9maWIYUC8PxX4Np0FLQfqFLw==",
-      "type": "package",
-      "path": "sharphook/7.0.2",
+      "path": "sharphook/5.3.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "build/net462/SharpHook.targets",
+        "build/SharpHook.targets",
         "icon.png",
-        "lib/net472/SharpHook.dll",
-        "lib/net472/SharpHook.xml",
-        "lib/net8.0-maccatalyst18.0/SharpHook.dll",
-        "lib/net8.0-maccatalyst18.0/SharpHook.xml",
+        "lib/net462/SharpHook.dll",
+        "lib/net462/SharpHook.xml",
+        "lib/net6.0/SharpHook.dll",
+        "lib/net6.0/SharpHook.xml",
+        "lib/net7.0/SharpHook.dll",
+        "lib/net7.0/SharpHook.xml",
         "lib/net8.0/SharpHook.dll",
         "lib/net8.0/SharpHook.xml",
-        "lib/net9.0-maccatalyst18.0/SharpHook.dll",
-        "lib/net9.0-maccatalyst18.0/SharpHook.xml",
-        "lib/net9.0/SharpHook.dll",
-        "lib/net9.0/SharpHook.xml",
         "lib/netstandard2.0/SharpHook.dll",
         "lib/netstandard2.0/SharpHook.xml",
         "runtimes/linux-arm/native/libuiohook.so",
@@ -118,15 +93,14 @@
         "runtimes/win-arm64/native/uiohook.dll",
         "runtimes/win-x64/native/uiohook.dll",
         "runtimes/win-x86/native/uiohook.dll",
-        "sharphook.7.0.2.nupkg.sha512",
+        "sharphook.5.3.0.nupkg.sha512",
         "sharphook.nuspec"
       ]
     }
   },
   "projectFileDependencyGroups": {
-    "net6.0": [
-      "InputSimulator >= 1.0.4",
-      "SharpHook >= 7.0.2"
+    "net6.0-windows7.0": [
+      "SharpHook >= 5.2.4"
     ]
   },
   "packageFolders": {
@@ -145,14 +119,14 @@
         "C:\\Users\\skree\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
-        "net6.0"
+        "net6.0-windows"
       ],
       "sources": {
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net6.0": {
-          "targetAlias": "net6.0",
+        "net6.0-windows7.0": {
+          "targetAlias": "net6.0-windows",
           "projectReferences": {}
         }
       },
@@ -163,16 +137,12 @@
       }
     },
     "frameworks": {
-      "net6.0": {
-        "targetAlias": "net6.0",
+      "net6.0-windows7.0": {
+        "targetAlias": "net6.0-windows",
         "dependencies": {
-          "InputSimulator": {
-            "target": "Package",
-            "version": "[1.0.4, )"
-          },
           "SharpHook": {
             "target": "Package",
-            "version": "[7.0.2, )"
+            "version": "[5.2.4, )"
           }
         },
         "imports": [
@@ -189,6 +159,9 @@
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
+          },
+          "Microsoft.WindowsDesktop.App.WindowsForms": {
+            "privateAssets": "none"
           }
         },
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.428\\RuntimeIdentifierGraph.json"
@@ -197,13 +170,13 @@
   },
   "logs": [
     {
-      "code": "NU1701",
+      "code": "NU1603",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "Пакет \"InputSimulator 1.0.4\" был восстановлен с помощью \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\", а не целевой платформы проекта \"net6.0\". Этот пакет может быть не полностью совместим с вашим проектом.",
-      "libraryId": "InputSimulator",
+      "message": "smart-keylogger зависит от SharpHook (>= 5.2.4), но SharpHook 5.2.4 не найден. Использовано наилучшее приближенное соответствие SharpHook 5.3.0.",
+      "libraryId": "SharpHook",
       "targetGraphs": [
-        "net6.0"
+        "net6.0-windows7.0"
       ]
     }
   ]

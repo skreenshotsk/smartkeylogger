@@ -1,21 +1,20 @@
 {
   "version": 2,
-  "dgSpecHash": "1QD/HVLneKRwaxpFPAEmCBsAAhsvJbFO7UYJfhJX3hj5DYms926gJOzfupa6BOhPIls0q999hBXJBjpQp43x7Q==",
+  "dgSpecHash": "tVnjxj8c4OkVHdcIO0U69JceYKxubqZ5i81lkH4S5PpxXeE3Eowur4l1tzzqH84l/uiR7MoLHpon2oTtV0csJA==",
   "success": true,
   "projectFilePath": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\skree\\.nuget\\packages\\inputsimulator\\1.0.4\\inputsimulator.1.0.4.nupkg.sha512",
-    "C:\\Users\\skree\\.nuget\\packages\\sharphook\\7.0.2\\sharphook.7.0.2.nupkg.sha512"
+    "C:\\Users\\skree\\.nuget\\packages\\sharphook\\5.3.0\\sharphook.5.3.0.nupkg.sha512"
   ],
   "logs": [
     {
-      "code": "NU1701",
+      "code": "NU1603",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "Пакет \"InputSimulator 1.0.4\" был восстановлен с помощью \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\", а не целевой платформы проекта \"net6.0\". Этот пакет может быть не полностью совместим с вашим проектом.",
-      "libraryId": "InputSimulator",
+      "message": "smart-keylogger зависит от SharpHook (>= 5.2.4), но SharpHook 5.2.4 не найден. Использовано наилучшее приближенное соответствие SharpHook 5.3.0.",
+      "libraryId": "SharpHook",
       "targetGraphs": [
-        "net6.0"
+        "net6.0-windows7.0"
       ]
     }
   ]
