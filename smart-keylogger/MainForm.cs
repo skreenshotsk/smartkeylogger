@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace MacroRecorderGUI
 {
@@ -14,20 +15,29 @@ namespace MacroRecorderGUI
         private bool isPlaying = false;
         private bool isRecording = false;
         private CancellationTokenSource playbackCancellation;
-        private Dictionary<Keys, Action> hotkeyActions;
+        
+        // Константы для регистрации горячих клавиш
+        private const int MOD_NONE = 0x0000;
+        private const int WM_HOTKEY = 0x0312;
+        
+        // ID для горячих клавиш
+        private const int HOTKEY_START_RECORD = 1;
+        private const int HOTKEY_STOP_RECORD = 2;
+        private const int HOTKEY_PLAY = 3;
+        private const int HOTKEY_PLAY_LOOP = 4;
+        private const int HOTKEY_STOP_PLAY = 5;
 
-        // Горячие клавиши
-        private Keys startRecordHotkey = Keys.F9;
-        private Keys stopRecordHotkey = Keys.F10;
-        private Keys playHotkey = Keys.F11;
-        private Keys loopPlayHotkey = Keys.F12;
-        private Keys stopPlayHotkey = Keys.Escape;
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         public MainForm()
         {
             InitializeComponent();
-            InitializeHotkeys();
             InitializeComponents();
+            RegisterGlobalHotkeys();
         }
 
         private void InitializeComponents()
@@ -36,46 +46,68 @@ namespace MacroRecorderGUI
             player = new MacroPlayer();
             playbackCancellation = new CancellationTokenSource();
 
-            // Настройка формы для работы с горячими клавишами когда окно не в фокусе
-            this.ShowInTaskbar = true;
-            this.KeyPreview = true;
-
             UpdateUI();
         }
 
-        private void InitializeHotkeys()
+        private void RegisterGlobalHotkeys()
         {
-            hotkeyActions = new Dictionary<Keys, Action>
-            {
-                { Keys.F9, StartRecording },
-                { Keys.F10, StopRecording },
-                { Keys.F11, PlayMacro },
-                { Keys.F12, PlayMacroLoop },
-                { Keys.Escape, StopPlayback }
-            };
+            // Регистрируем глобальные горячие клавиши
+            RegisterHotKey(this.Handle, HOTKEY_START_RECORD, MOD_NONE, (uint)Keys.F9);
+            RegisterHotKey(this.Handle, HOTKEY_STOP_RECORD, MOD_NONE, (uint)Keys.F10);
+            RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
+            RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_NONE, (uint)Keys.F12);
+            RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, (uint)Keys.Escape);
         }
 
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        private void UnregisterGlobalHotkeys()
         {
-            // Обработка горячих клавиш даже когда окно не в фокусе
-            if (hotkeyActions.ContainsKey(keyData))
+            // Отменяем регистрацию горячих клавиш при закрытии
+            UnregisterHotKey(this.Handle, HOTKEY_START_RECORD);
+            UnregisterHotKey(this.Handle, HOTKEY_STOP_RECORD);
+            UnregisterHotKey(this.Handle, HOTKEY_PLAY);
+            UnregisterHotKey(this.Handle, HOTKEY_PLAY_LOOP);
+            UnregisterHotKey(this.Handle, HOTKEY_STOP_PLAY);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            // Обрабатываем сообщения о горячих клавишах
+            if (m.Msg == WM_HOTKEY)
             {
-                hotkeyActions[keyData].Invoke();
-                return true;
+                switch (m.WParam.ToInt32())
+                {
+                    case HOTKEY_START_RECORD:
+                        BeginInvoke(new Action(StartRecording));
+                        break;
+                    case HOTKEY_STOP_RECORD:
+                        BeginInvoke(new Action(StopRecording));
+                        break;
+                    case HOTKEY_PLAY:
+                        BeginInvoke(new Action(PlayMacro));
+                        break;
+                    case HOTKEY_PLAY_LOOP:
+                        BeginInvoke(new Action(PlayMacroLoop));
+                        break;
+                    case HOTKEY_STOP_PLAY:
+                        BeginInvoke(new Action(StopPlayback));
+                        break;
+                }
+                return;
             }
-            return base.ProcessCmdKey(ref msg, keyData);
+            base.WndProc(ref m);
         }
 
         private async void StartRecording()
         {
-            if (isRecording) return;
+            if (isRecording || isPlaying) return;
 
             isRecording = true;
-            recorder.StartRecording();
             UpdateUI();
             
-            // Добавляем задержку чтобы не записать нажатие самой горячей клавиши
-            await Task.Delay(100);
+            // Задержка чтобы не записать саму горячую клавишу
+            await Task.Delay(500);
+            
+            recorder.StartRecording();
         }
 
         private void StopRecording()
@@ -153,13 +185,13 @@ namespace MacroRecorderGUI
             if (!isPlaying) return;
 
             playbackCancellation.Cancel();
+            player.Stop(); // Вызываем метод Stop у плеера для немедленной остановки
             isPlaying = false;
             UpdateUI();
         }
 
         private void UpdateUI()
         {
-            // Обновляем UI в основном потоке
             if (this.InvokeRequired)
             {
                 this.Invoke(new Action(UpdateUI));
@@ -188,7 +220,6 @@ namespace MacroRecorderGUI
                 lblStatus.ForeColor = System.Drawing.Color.Blue;
             }
 
-            // Обновляем информацию о горячих клавишах
             lblHotkeys.Text = $"Горячие клавиши (работают всегда):\n" +
                              $"F9 - Старт записи\n" +
                              $"F10 - Стоп записи\n" +
@@ -232,8 +263,10 @@ namespace MacroRecorderGUI
             if (isPlaying)
             {
                 playbackCancellation.Cancel();
+                player.Stop();
             }
             
+            UnregisterGlobalHotkeys();
             playbackCancellation?.Dispose();
         }
 

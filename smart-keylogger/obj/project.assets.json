@@ -109,11 +109,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj",
+      "projectUniqueName": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj",
       "projectName": "smart-keylogger",
-      "projectPath": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj",
+      "projectPath": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj",
       "packagesPath": "C:\\Users\\skree\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\obj\\",
+      "outputPath": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\skree\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -173,7 +173,7 @@
       "code": "NU1603",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "smart-keylogger зависит от SharpHook (>= 5.2.4), но SharpHook 5.2.4 не найден. Использовано наилучшее приближенное соответствие SharpHook 5.3.0.",
+      "message": "smart-keylogger depends on SharpHook (>= 5.2.4) but SharpHook 5.2.4 was not found. An approximate best match of SharpHook 5.3.0 was resolved.",
       "libraryId": "SharpHook",
       "targetGraphs": [
         "net6.0-windows7.0"

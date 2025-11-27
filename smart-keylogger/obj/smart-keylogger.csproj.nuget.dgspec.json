@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj": {}
+    "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj": {}
   },
   "projects": {
-    "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj": {
+    "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj",
+        "projectUniqueName": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj",
         "projectName": "smart-keylogger",
-        "projectPath": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\smart-keylogger.csproj",
+        "projectPath": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj",
         "packagesPath": "C:\\Users\\skree\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\skree\\OneDrive\\Рабочий стол\\smart-keylogger\\smart-keylogger\\obj\\",
+        "outputPath": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\skree\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -16,10 +16,10 @@ public class MacroRecorder
     // Список кодов горячих клавиш которые нужно игнорировать
     private HashSet<int> ignoredKeyCodes = new HashSet<int>
     {
-        0x70, // F9
-        0x71, // F10  
-        0x72, // F11
-        0x73, // F12
+        0x78, // F9
+        0x79, // F10  
+        0x7A, // F11
+        0x7B, // F12
         0x1B  // Escape
     };
 
@@ -163,6 +163,11 @@ public class MacroRecorder
         });
     }
 
+    public bool IsIgnoredKey(int keyCode)
+    {
+        return ignoredKeyCodes.Contains(keyCode);
+    }
+
     private void OnKeyPressed(object? sender, KeyboardHookEventArgs e)
     {
         if (!isRecording) return;
@@ -170,7 +175,7 @@ public class MacroRecorder
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
         
         // Пропускаем горячие клавиши
-        if (ignoredKeyCodes.Contains(virtualKeyCode))
+        if (IsIgnoredKey(virtualKeyCode))
         {
             Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
             return;
@@ -196,8 +201,9 @@ public class MacroRecorder
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
         
         // Пропускаем горячие клавиши
-        if (ignoredKeyCodes.Contains(virtualKeyCode))
+        if (IsIgnoredKey(virtualKeyCode))
         {
+            Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
             return;
         }
         
