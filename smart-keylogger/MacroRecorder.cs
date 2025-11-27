@@ -20,7 +20,7 @@ public class MacroRecorder
         0x79, // F10  
         0x7A, // F11
         0x7B, // F12
-        0x1B  // Escape
+        0xC0  // ` (~)
     };
 
     // Конвертер кодов прямо внутри класса

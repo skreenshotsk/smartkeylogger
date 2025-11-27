@@ -1,14 +1,19 @@
-// Fixed MacroPlayer.cs - оптимизированная работа с CancellationToken
+// Fixed MacroPlayer.cs - с фоновой проверкой клавиши остановки
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 public class MacroPlayer
 {
     private readonly Random _random = new Random();
     private POINT _lastMousePos = new POINT { X = 0, Y = 0 };
     private volatile bool _stopRequested = false;
+    private CancellationTokenSource _internalCancellation;
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
 
     public async Task PlayEvents(List<InputEvent>? events, bool loop = false, CancellationToken cancellationToken = default)
     {
@@ -19,87 +24,137 @@ public class MacroPlayer
         }
 
         _stopRequested = false;
+        _internalCancellation = new CancellationTokenSource();
         
-        // Регистрируем callback для отмены
-        using (cancellationToken.Register(() => _stopRequested = true))
+        // Запускаем фоновую проверку клавиши Backquote
+        var keyCheckTask = StartBackquoteCheck(_internalCancellation.Token);
+
+        // Объединяем внешний и внутренний cancellation token
+        using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellation.Token))
         {
-            Console.WriteLine($"Воспроизведение {events.Count} событий...");
-            Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
-
-            // Задержка с проверкой отмены каждые 100мс
-            for (int i = 0; i < 30; i++)
+            try
             {
-                if (_stopRequested)
+                Console.WriteLine($"Воспроизведение {events.Count} событий...");
+                Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
+                Console.WriteLine("Нажмите ` (Backquote) для остановки");
+
+                // Задержка с проверкой отмены
+                for (int i = 0; i < 30; i++)
                 {
-                    Console.WriteLine("Воспроизведение отменено во время задержки");
-                    return;
-                }
-                await Task.Delay(100);
-            }
-
-            events.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-
-            do
-            {
-                if (_stopRequested) break;
-
-                long startTime = events[0].Timestamp;
-                long playbackStartTime = DateTime.Now.Ticks;
-
-                foreach (var e in events)
-                {
-                    if (_stopRequested) break;
-
-                    long eventTimeFromStart = e.Timestamp - startTime;
-                    long targetTime = playbackStartTime + eventTimeFromStart;
-
-                    // Оптимизированное ожидание с проверкой отмены каждые 10мс
-                    while (DateTime.Now.Ticks < targetTime)
+                    if (_stopRequested || linkedCts.Token.IsCancellationRequested)
                     {
-                        if (_stopRequested) break;
+                        Console.WriteLine("Воспроизведение отменено во время задержки");
+                        return;
+                    }
+                    await Task.Delay(100);
+                }
 
-                        long remainingTicks = targetTime - DateTime.Now.Ticks;
-                        int remainingMs = (int)(remainingTicks / TimeSpan.TicksPerMillisecond);
+                events.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
 
-                        if (remainingMs > 20)
+                do
+                {
+                    if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
+
+                    long startTime = events[0].Timestamp;
+                    long playbackStartTime = DateTime.Now.Ticks;
+
+                    foreach (var e in events)
+                    {
+                        // Проверяем отмену перед каждым событием
+                        if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
+
+                        long eventTimeFromStart = e.Timestamp - startTime;
+                        long targetTime = playbackStartTime + eventTimeFromStart;
+
+                        // Ожидание с частой проверкой
+                        while (DateTime.Now.Ticks < targetTime)
                         {
-                            // Для больших интервалов ждем блоками по 10мс
-                            await Task.Delay(Math.Min(10, remainingMs / 2));
+                            if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
+
+                            long remainingTicks = targetTime - DateTime.Now.Ticks;
+                            int remainingMs = (int)(remainingTicks / TimeSpan.TicksPerMillisecond);
+
+                            if (remainingMs > 10)
+                            {
+                                // Ждем маленькими блоками по 5мс
+                                await Task.Delay(Math.Min(5, remainingMs / 2));
+                            }
+                            else if (remainingMs > 2)
+                            {
+                                await Task.Delay(1);
+                            }
+                            else
+                            {
+                                Thread.Sleep(0);
+                            }
+                            
+                            // Дополнительная проверка
+                            if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                         }
-                        else if (remainingMs > 5)
-                        {
-                            // Для средних интервалов ждем 1мс
-                            await Task.Delay(1);
-                        }
-                        else
-                        {
-                            // Для маленьких интервалов используем Thread.Sleep(0) для точности
-                            Thread.Sleep(0);
-                        }
+
+                        if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
+
+                        // Выполняем событие
+                        ExecuteEvent(e);
+                        
+                        // Проверка после выполнения события
+                        if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                     }
 
-                    if (_stopRequested) break;
+                    if (!_stopRequested && !linkedCts.Token.IsCancellationRequested)
+                    {
+                        Console.WriteLine("Воспроизведение завершено.");
+                    }
 
-                    // Выполняем событие
-                    ExecuteEvent(e);
-                }
+                } while (loop && !_stopRequested && !linkedCts.Token.IsCancellationRequested);
 
-                if (!_stopRequested)
+                if (_stopRequested || linkedCts.Token.IsCancellationRequested)
                 {
-                    Console.WriteLine("Воспроизведение завершено.");
+                    Console.WriteLine("Воспроизведение остановлено пользователем");
                 }
-
-            } while (loop && !_stopRequested);
-
-            if (_stopRequested)
+            }
+            finally
             {
-                Console.WriteLine("Воспроизведение остановлено пользователем");
+                // Останавливаем фоновую проверку
+                _internalCancellation.Cancel();
+                await keyCheckTask;
+                _internalCancellation.Dispose();
             }
         }
     }
 
+    private async Task StartBackquoteCheck(CancellationToken cancellationToken)
+    {
+        await Task.Run(async () =>
+        {
+            const int VK_BACKQUOTE = 0xC0;
+            bool wasPressed = false;
+
+            while (!cancellationToken.IsCancellationRequested && !_stopRequested)
+            {
+                // Проверяем состояние клавиши Backquote
+                short keyState = GetAsyncKeyState(VK_BACKQUOTE);
+                bool isPressed = (keyState & 0x8000) != 0;
+
+                if (isPressed && !wasPressed)
+                {
+                    // Клавиша только что нажата
+                    Console.WriteLine("Обнаружено нажатие Backquote - остановка воспроизведения");
+                    _stopRequested = true;
+                    _internalCancellation.Cancel();
+                    break;
+                }
+
+                wasPressed = isPressed;
+                await Task.Delay(10); // Проверяем каждые 10мс
+            }
+        });
+    }
+
     private void ExecuteEvent(InputEvent e)
     {
+        if (_stopRequested) return;
+
         switch (e.EventType)
         {
             case "KeyPress":
@@ -120,7 +175,7 @@ public class MacroPlayer
 
     private void SimulateKeyPress(int keyCode, bool isPressed)
     {
-        if (keyCode == 0) return;
+        if (keyCode == 0 || _stopRequested) return;
 
         try
         {
@@ -141,6 +196,8 @@ public class MacroPlayer
 
     private void SimulateMouseClick(int x, int y, int button, bool isPressed)
     {
+        if (_stopRequested) return;
+
         try
         {
             // Устанавливаем позицию курсора
@@ -205,5 +262,6 @@ public class MacroPlayer
     public void Stop()
     {
         _stopRequested = true;
+        _internalCancellation?.Cancel();
     }
 }

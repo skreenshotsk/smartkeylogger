@@ -27,6 +27,9 @@ namespace MacroRecorderGUI
         private const int HOTKEY_PLAY_LOOP = 4;
         private const int HOTKEY_STOP_PLAY = 5;
 
+        // Код клавиши Backquote ( ` )
+        private const uint VK_BACKQUOTE = 0xC0;
+
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
@@ -56,12 +59,11 @@ namespace MacroRecorderGUI
             RegisterHotKey(this.Handle, HOTKEY_STOP_RECORD, MOD_NONE, (uint)Keys.F10);
             RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
             RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_NONE, (uint)Keys.F12);
-            RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, (uint)Keys.Escape);
+            RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
         }
 
         private void UnregisterGlobalHotkeys()
         {
-            // Отменяем регистрацию горячих клавиш при закрытии
             UnregisterHotKey(this.Handle, HOTKEY_START_RECORD);
             UnregisterHotKey(this.Handle, HOTKEY_STOP_RECORD);
             UnregisterHotKey(this.Handle, HOTKEY_PLAY);
@@ -71,7 +73,6 @@ namespace MacroRecorderGUI
 
         protected override void WndProc(ref Message m)
         {
-            // Обрабатываем сообщения о горячих клавишах
             if (m.Msg == WM_HOTKEY)
             {
                 switch (m.WParam.ToInt32())
@@ -95,6 +96,40 @@ namespace MacroRecorderGUI
                 return;
             }
             base.WndProc(ref m);
+        }
+
+        // Также оставляем обработку ProcessCmdKey для случая когда окно в фокусе
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Для Backquote нужно использовать числовое значение, так как его нет в Keys enum
+            if (isPlaying && (int)keyData == 0xC0)
+            {
+                StopPlayback();
+                return true;
+            }
+            
+            if (keyData == Keys.F9 && !isRecording && !isPlaying)
+            {
+                StartRecording();
+                return true;
+            }
+            else if (keyData == Keys.F10 && isRecording)
+            {
+                StopRecording();
+                return true;
+            }
+            else if (keyData == Keys.F11 && !isRecording && !isPlaying)
+            {
+                PlayMacro();
+                return true;
+            }
+            else if (keyData == Keys.F12 && !isRecording && !isPlaying)
+            {
+                PlayMacroLoop();
+                return true;
+            }
+            
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private async void StartRecording()
@@ -185,9 +220,11 @@ namespace MacroRecorderGUI
             if (!isPlaying) return;
 
             playbackCancellation.Cancel();
-            player.Stop(); // Вызываем метод Stop у плеера для немедленной остановки
+            player.Stop();
             isPlaying = false;
             UpdateUI();
+            
+            Console.WriteLine("Воспроизведение остановлено по запросу пользователя");
         }
 
         private void UpdateUI()
@@ -211,7 +248,7 @@ namespace MacroRecorderGUI
             }
             else if (isPlaying)
             {
-                lblStatus.Text = "▶ Воспроизведение...";
+                lblStatus.Text = "▶ Воспроизведение... (` для остановки)";
                 lblStatus.ForeColor = System.Drawing.Color.Green;
             }
             else
@@ -225,7 +262,7 @@ namespace MacroRecorderGUI
                              $"F10 - Стоп записи\n" +
                              $"F11 - Воспроизвести\n" +
                              $"F12 - Цикл\n" +
-                             $"Esc - Стоп воспроизведения";
+                             $"` (Backquote) - Стоп воспроизведения";
         }
 
         private void btnStartRecord_Click(object sender, EventArgs e)
@@ -273,7 +310,8 @@ namespace MacroRecorderGUI
         private void btnSettings_Click(object sender, EventArgs e)
         {
             MessageBox.Show("Горячие клавиши работают даже когда окно свернуто!\n\n" +
-                           "Для остановки воспроизведения нажмите Esc", 
+                           "Для остановки воспроизведения нажмите ` (Backquote) - клавиша над Tab\n" +
+                           "Обычно находится слева от цифры 1 на стандартной клавиатуре", 
                            "Информация", 
                            MessageBoxButtons.OK, 
                            MessageBoxIcon.Information);

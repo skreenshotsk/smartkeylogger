@@ -74,7 +74,7 @@ namespace MacroRecorderGUI
             this.btnStopPlay.Name = "btnStopPlay";
             this.btnStopPlay.Size = new System.Drawing.Size(160, 45);
             this.btnStopPlay.TabIndex = 4;
-            this.btnStopPlay.Text = "Стоп воспроизведения (Esc)";
+            this.btnStopPlay.Text = "Стоп воспроизведения (Backquote)";
             this.btnStopPlay.UseVisualStyleBackColor = true;
             this.btnStopPlay.Click += new System.EventHandler(this.btnStopPlay_Click);
             // 
