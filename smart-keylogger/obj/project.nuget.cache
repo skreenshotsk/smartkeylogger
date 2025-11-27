@@ -1,21 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "pkizUszZz8ZuL2xEK8o1j94wlEB5SRLIjOj2yGotaRon7QhFIrQ0GElLIbc6YSjn6gN9Kp4QTHzhWzohZ+gb4g==",
+  "dgSpecHash": "apHfGWIAcgiP1i/7fX6WhX1TJdd/1XhdjtO5yTSTMuGbRnyA8dcaMuIzDuwJHErmh+BQ/BNlC+FQ575Cx5/SQQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\skree\\Desktop\\smartkeylogger\\smart-keylogger\\smart-keylogger.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\skree\\.nuget\\packages\\sharphook\\5.3.0\\sharphook.5.3.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "smart-keylogger depends on SharpHook (>= 5.2.4) but SharpHook 5.2.4 was not found. An approximate best match of SharpHook 5.3.0 was resolved.",
-      "libraryId": "SharpHook",
-      "targetGraphs": [
-        "net6.0-windows7.0"
-      ]
-    }
-  ]
+  "logs": []
 }

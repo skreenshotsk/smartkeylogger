@@ -1,4 +1,4 @@
-// Fixed MacroPlayer.cs - с фоновой проверкой клавиши остановки
+// MacroPlayer.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -10,7 +10,7 @@ public class MacroPlayer
     private readonly Random _random = new Random();
     private POINT _lastMousePos = new POINT { X = 0, Y = 0 };
     private volatile bool _stopRequested = false;
-    private CancellationTokenSource _internalCancellation;
+    private CancellationTokenSource? _internalCancellation;
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
@@ -26,10 +26,8 @@ public class MacroPlayer
         _stopRequested = false;
         _internalCancellation = new CancellationTokenSource();
         
-        // Запускаем фоновую проверку клавиши Backquote
         var keyCheckTask = StartBackquoteCheck(_internalCancellation.Token);
 
-        // Объединяем внешний и внутренний cancellation token
         using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellation.Token))
         {
             try
@@ -38,7 +36,6 @@ public class MacroPlayer
                 Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
                 Console.WriteLine("Нажмите ` (Backquote) для остановки");
 
-                // Задержка с проверкой отмены
                 for (int i = 0; i < 30; i++)
                 {
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested)
@@ -60,13 +57,11 @@ public class MacroPlayer
 
                     foreach (var e in events)
                     {
-                        // Проверяем отмену перед каждым событием
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
                         long eventTimeFromStart = e.Timestamp - startTime;
                         long targetTime = playbackStartTime + eventTimeFromStart;
 
-                        // Ожидание с частой проверкой
                         while (DateTime.Now.Ticks < targetTime)
                         {
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
@@ -76,7 +71,6 @@ public class MacroPlayer
 
                             if (remainingMs > 10)
                             {
-                                // Ждем маленькими блоками по 5мс
                                 await Task.Delay(Math.Min(5, remainingMs / 2));
                             }
                             else if (remainingMs > 2)
@@ -88,16 +82,13 @@ public class MacroPlayer
                                 Thread.Sleep(0);
                             }
                             
-                            // Дополнительная проверка
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                         }
 
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                        // Выполняем событие
                         ExecuteEvent(e);
                         
-                        // Проверка после выполнения события
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                     }
 
@@ -115,9 +106,9 @@ public class MacroPlayer
             }
             finally
             {
-                // Останавливаем фоновую проверку
                 _internalCancellation.Cancel();
-                await keyCheckTask;
+                if (keyCheckTask != null)
+                    await keyCheckTask;
                 _internalCancellation.Dispose();
             }
         }
@@ -132,23 +123,21 @@ public class MacroPlayer
 
             while (!cancellationToken.IsCancellationRequested && !_stopRequested)
             {
-                // Проверяем состояние клавиши Backquote
                 short keyState = GetAsyncKeyState(VK_BACKQUOTE);
                 bool isPressed = (keyState & 0x8000) != 0;
 
                 if (isPressed && !wasPressed)
                 {
-                    // Клавиша только что нажата
                     Console.WriteLine("Обнаружено нажатие Backquote - остановка воспроизведения");
                     _stopRequested = true;
-                    _internalCancellation.Cancel();
+                    _internalCancellation?.Cancel();
                     break;
                 }
 
                 wasPressed = isPressed;
-                await Task.Delay(10); // Проверяем каждые 10мс
+                await Task.Delay(10);
             }
-        });
+        }, cancellationToken);
     }
 
     private void ExecuteEvent(InputEvent e)
@@ -200,7 +189,6 @@ public class MacroPlayer
 
         try
         {
-            // Устанавливаем позицию курсора
             if (Math.Abs(_lastMousePos.X - x) > 2 || Math.Abs(_lastMousePos.Y - y) > 2)
             {
                 WinAPI.SetCursorPos(x, y);
@@ -208,7 +196,7 @@ public class MacroPlayer
                 _lastMousePos.Y = y;
             }
 
-            if (button == 1) // Левая кнопка
+            if (button == 1)
             {
                 if (isPressed)
                 {
@@ -219,7 +207,7 @@ public class MacroPlayer
                     WinAPI.mouse_event(WinAPI.MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
                 }
             }
-            else if (button == 2) // Правая кнопка
+            else if (button == 2)
             {
                 if (isPressed)
                 {
@@ -233,7 +221,6 @@ public class MacroPlayer
         }
         catch
         {
-            // Резервный способ для абсолютных координат
             try
             {
                 int screenWidth = WinAPI.GetSystemMetrics(0);
@@ -258,7 +245,6 @@ public class MacroPlayer
         }
     }
 
-    // Метод для принудительной остановки (можно вызывать извне)
     public void Stop()
     {
         _stopRequested = true;

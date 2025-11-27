@@ -10,11 +10,11 @@ namespace MacroRecorderGUI
 {
     public partial class MainForm : Form
     {
-        private MacroRecorder recorder;
-        private MacroPlayer player;
+        private MacroRecorder? recorder;
+        private MacroPlayer? player;
+        private CancellationTokenSource? playbackCancellation;
         private bool isPlaying = false;
         private bool isRecording = false;
-        private CancellationTokenSource playbackCancellation;
         
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -98,10 +98,8 @@ namespace MacroRecorderGUI
             base.WndProc(ref m);
         }
 
-        // Также оставляем обработку ProcessCmdKey для случая когда окно в фокусе
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // Для Backquote нужно использовать числовое значение, так как его нет в Keys enum
             if (isPlaying && (int)keyData == 0xC0)
             {
                 StopPlayback();
@@ -134,20 +132,18 @@ namespace MacroRecorderGUI
 
         private async void StartRecording()
         {
-            if (isRecording || isPlaying) return;
+            if (isRecording || isPlaying || recorder == null) return;
 
             isRecording = true;
             UpdateUI();
             
-            // Задержка чтобы не записать саму горячую клавишу
             await Task.Delay(500);
-            
             recorder.StartRecording();
         }
 
         private void StopRecording()
         {
-            if (!isRecording) return;
+            if (!isRecording || recorder == null) return;
 
             isRecording = false;
             recorder.StopRecording();
@@ -157,7 +153,7 @@ namespace MacroRecorderGUI
 
         private async void PlayMacro()
         {
-            if (isPlaying || isRecording) return;
+            if (isPlaying || isRecording || recorder == null || player == null) return;
 
             var events = recorder.LoadFromFile();
             if (events != null && events.Count > 0)
@@ -187,7 +183,7 @@ namespace MacroRecorderGUI
 
         private async void PlayMacroLoop()
         {
-            if (isPlaying || isRecording) return;
+            if (isPlaying || isRecording || recorder == null || player == null) return;
 
             var events = recorder.LoadFromFile();
             if (events != null && events.Count > 0)
@@ -217,9 +213,9 @@ namespace MacroRecorderGUI
 
         private void StopPlayback()
         {
-            if (!isPlaying) return;
+            if (!isPlaying || player == null) return;
 
-            playbackCancellation.Cancel();
+            playbackCancellation?.Cancel();
             player.Stop();
             isPlaying = false;
             UpdateUI();
@@ -235,34 +231,104 @@ namespace MacroRecorderGUI
                 return;
             }
 
+            // Обновляем состояния кнопок
+            UpdateButtonStates();
+
+            // Обновляем статус
+            if (lblStatus != null)
+            {
+                if (isRecording)
+                {
+                    lblStatus.Text = "⚫ ИДЕТ ЗАПИСЬ МАКРОСА...";
+                    lblStatus.ForeColor = System.Drawing.Color.FromArgb(244, 67, 54);
+                    lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 235, 238);
+                }
+                else if (isPlaying)
+                {
+                    lblStatus.Text = "▶ ИДЕТ ВОСПРОИЗВЕДЕНИЕ... (ДЛЯ ОСТАНОВКИ НАЖМИТЕ `)";
+                    lblStatus.ForeColor = System.Drawing.Color.FromArgb(76, 175, 80);
+                    lblStatus.BackColor = System.Drawing.Color.FromArgb(232, 245, 233);
+                }
+                else
+                {
+                    lblStatus.Text = "● ГОТОВ К РАБОТЕ";
+                    lblStatus.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
+                    lblStatus.BackColor = System.Drawing.Color.FromArgb(227, 242, 253);
+                }
+            }
+        }
+
+        private void UpdateButtonStates()
+        {
+            // Запись
             btnStartRecord.Enabled = !isRecording && !isPlaying;
             btnStopRecord.Enabled = isRecording && !isPlaying;
+
+            // Воспроизведение
             btnPlay.Enabled = !isRecording && !isPlaying;
             btnPlayLoop.Enabled = !isRecording && !isPlaying;
-            btnStopPlay.Enabled = isPlaying && !isRecording;
+            btnStopPlayback.Enabled = isPlaying && !isRecording;
 
-            if (isRecording)
+            // Обновляем внешний вид кнопок
+            UpdateButtonAppearance(btnStartRecord, !isRecording && !isPlaying);
+            UpdateButtonAppearance(btnStopRecord, isRecording && !isPlaying);
+            UpdateButtonAppearance(btnPlay, !isRecording && !isPlaying);
+            UpdateButtonAppearance(btnPlayLoop, !isRecording && !isPlaying);
+            UpdateButtonAppearance(btnStopPlayback, isPlaying && !isRecording);
+        }
+
+        private void UpdateButtonAppearance(Button button, bool enabled)
+        {
+            // Активный цвет - синий (#2196F3)
+            System.Drawing.Color activeColor = System.Drawing.Color.FromArgb(33, 150, 243);
+            
+            // Неактивный цвет - серый (#BDBDBD)
+            System.Drawing.Color inactiveColor = System.Drawing.Color.FromArgb(189, 189, 189);
+
+            if (enabled)
             {
-                lblStatus.Text = "⚫ Запись...";
-                lblStatus.ForeColor = System.Drawing.Color.Red;
-            }
-            else if (isPlaying)
-            {
-                lblStatus.Text = "▶ Воспроизведение... (` для остановки)";
-                lblStatus.ForeColor = System.Drawing.Color.Green;
+                button.BackColor = activeColor;
+                button.Cursor = Cursors.Hand;
+                button.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(25, 118, 210); // Темнее при наведении
+                button.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(13, 71, 161); // Еще темнее при нажатии
             }
             else
             {
-                lblStatus.Text = "● Готов";
-                lblStatus.ForeColor = System.Drawing.Color.Blue;
+                button.BackColor = inactiveColor;
+                button.Cursor = Cursors.Default;
+                button.FlatAppearance.MouseOverBackColor = inactiveColor;
+                button.FlatAppearance.MouseDownBackColor = inactiveColor;
+            }
+        }
+
+        // Убери старый метод btnStopPlay_Click и замени на:
+        private void btnStopPlay_Click(object sender, EventArgs e)
+        {
+            StopPlayback();
+        }
+        private void UpdateButtonAppearance()
+        {
+            // Функция для установки прозрачности неактивных кнопок
+            void SetButtonState(Button button, bool enabled, System.Drawing.Color enabledColor)
+            {
+                if (enabled)
+                {
+                    button.BackColor = enabledColor;
+                    button.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    // Полупрозрачная версия цвета
+                    button.BackColor = System.Drawing.Color.FromArgb(150, enabledColor.R, enabledColor.G, enabledColor.B);
+                    button.Cursor = Cursors.Default;
+                }
             }
 
-            lblHotkeys.Text = $"Горячие клавиши (работают всегда):\n" +
-                             $"F9 - Старт записи\n" +
-                             $"F10 - Стоп записи\n" +
-                             $"F11 - Воспроизвести\n" +
-                             $"F12 - Цикл\n" +
-                             $"` (Backquote) - Стоп воспроизведения";
+            SetButtonState(btnStartRecord, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(76, 175, 80));
+            SetButtonState(btnStopRecord, isRecording && !isPlaying, System.Drawing.Color.FromArgb(244, 67, 54));
+            SetButtonState(btnPlay, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(33, 150, 243));
+            SetButtonState(btnPlayLoop, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(156, 39, 176));
+            SetButtonState(btnStopPlayback, isPlaying && !isRecording, System.Drawing.Color.FromArgb(255, 152, 0));
         }
 
         private void btnStartRecord_Click(object sender, EventArgs e)
@@ -284,22 +350,16 @@ namespace MacroRecorderGUI
         {
             PlayMacroLoop();
         }
-
-        private void btnStopPlay_Click(object sender, EventArgs e)
-        {
-            StopPlayback();
-        }
-
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (isRecording)
+            if (isRecording && recorder != null)
             {
                 recorder.StopRecording();
             }
             
-            if (isPlaying)
+            if (isPlaying && player != null)
             {
-                playbackCancellation.Cancel();
+                playbackCancellation?.Cancel();
                 player.Stop();
             }
             

@@ -18,123 +18,258 @@ namespace MacroRecorderGUI
 
         private void InitializeComponent()
         {
+            this.panelHeader = new System.Windows.Forms.Panel();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.panelRecording = new System.Windows.Forms.Panel();
+            this.lblRecordingTitle = new System.Windows.Forms.Label();
             this.btnStartRecord = new System.Windows.Forms.Button();
             this.btnStopRecord = new System.Windows.Forms.Button();
+            this.panelPlayback = new System.Windows.Forms.Panel();
+            this.lblPlaybackTitle = new System.Windows.Forms.Label();
             this.btnPlay = new System.Windows.Forms.Button();
             this.btnPlayLoop = new System.Windows.Forms.Button();
-            this.btnStopPlay = new System.Windows.Forms.Button();
+            this.btnStopPlayback = new System.Windows.Forms.Button();
+            this.panelStatus = new System.Windows.Forms.Panel();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.panelHotkeys = new System.Windows.Forms.Panel();
             this.lblHotkeys = new System.Windows.Forms.Label();
-            this.btnSettings = new System.Windows.Forms.Button();
+            this.lblHotkeysTitle = new System.Windows.Forms.Label();
+            this.panelHeader.SuspendLayout();
+            this.panelRecording.SuspendLayout();
+            this.panelPlayback.SuspendLayout();
+            this.panelStatus.SuspendLayout();
+            this.panelHotkeys.SuspendLayout();
             this.SuspendLayout();
-            // 
+            
+            // panelHeader
+            this.panelHeader.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.panelHeader.Controls.Add(this.lblTitle);
+            this.panelHeader.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelHeader.Location = new System.Drawing.Point(0, 0);
+            this.panelHeader.Name = "panelHeader";
+            this.panelHeader.Size = new System.Drawing.Size(700, 80);
+            this.panelHeader.TabIndex = 0;
+            
+            // lblTitle
+            this.lblTitle.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Bold);
+            this.lblTitle.ForeColor = System.Drawing.Color.White;
+            this.lblTitle.Location = new System.Drawing.Point(0, 0);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Size = new System.Drawing.Size(700, 80);
+            this.lblTitle.TabIndex = 0;
+            this.lblTitle.Text = "🕹 Macro Recorder";
+            this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            
+            // panelRecording
+            this.panelRecording.BackColor = System.Drawing.Color.White;
+            this.panelRecording.Controls.Add(this.lblRecordingTitle);
+            this.panelRecording.Controls.Add(this.btnStartRecord);
+            this.panelRecording.Controls.Add(this.btnStopRecord);
+            this.panelRecording.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelRecording.Location = new System.Drawing.Point(0, 80);
+            this.panelRecording.Name = "panelRecording";
+            this.panelRecording.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
+            this.panelRecording.Size = new System.Drawing.Size(700, 140);
+            this.panelRecording.TabIndex = 1;
+            
+            // lblRecordingTitle
+            this.lblRecordingTitle.AutoSize = true;
+            this.lblRecordingTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblRecordingTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
+            this.lblRecordingTitle.Location = new System.Drawing.Point(27, 15);
+            this.lblRecordingTitle.Name = "lblRecordingTitle";
+            this.lblRecordingTitle.Size = new System.Drawing.Size(82, 25);
+            this.lblRecordingTitle.TabIndex = 2;
+            this.lblRecordingTitle.Text = "Запись:";
+            
             // btnStartRecord
-            // 
-            this.btnStartRecord.Location = new System.Drawing.Point(20, 20);
+            this.btnStartRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnStartRecord.FlatAppearance.BorderSize = 0;
+            this.btnStartRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStartRecord.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnStartRecord.ForeColor = System.Drawing.Color.White;
+            this.btnStartRecord.Location = new System.Drawing.Point(30, 50);
             this.btnStartRecord.Name = "btnStartRecord";
-            this.btnStartRecord.Size = new System.Drawing.Size(140, 45);
+            this.btnStartRecord.Size = new System.Drawing.Size(300, 50);
             this.btnStartRecord.TabIndex = 0;
-            this.btnStartRecord.Text = "Старт записи (F9)";
-            this.btnStartRecord.UseVisualStyleBackColor = true;
+            this.btnStartRecord.Text = "🖱️ НАЧАТЬ ЗАПИСЬ (F9)";
+            this.btnStartRecord.UseVisualStyleBackColor = false;
             this.btnStartRecord.Click += new System.EventHandler(this.btnStartRecord_Click);
-            // 
+            
             // btnStopRecord
-            // 
-            this.btnStopRecord.Location = new System.Drawing.Point(170, 20);
+            this.btnStopRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnStopRecord.FlatAppearance.BorderSize = 0;
+            this.btnStopRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStopRecord.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnStopRecord.ForeColor = System.Drawing.Color.White;
+            this.btnStopRecord.Location = new System.Drawing.Point(350, 50);
             this.btnStopRecord.Name = "btnStopRecord";
-            this.btnStopRecord.Size = new System.Drawing.Size(140, 45);
+            this.btnStopRecord.Size = new System.Drawing.Size(320, 50);
             this.btnStopRecord.TabIndex = 1;
-            this.btnStopRecord.Text = "Стоп записи (F10)";
-            this.btnStopRecord.UseVisualStyleBackColor = true;
+            this.btnStopRecord.Text = "⏹ ОСТАНОВИТЬ ЗАПИСЬ (F10)";
+            this.btnStopRecord.UseVisualStyleBackColor = false;
             this.btnStopRecord.Click += new System.EventHandler(this.btnStopRecord_Click);
-            // 
+            
+            // panelPlayback
+            this.panelPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
+            this.panelPlayback.Controls.Add(this.lblPlaybackTitle);
+            this.panelPlayback.Controls.Add(this.btnPlay);
+            this.panelPlayback.Controls.Add(this.btnPlayLoop);
+            this.panelPlayback.Controls.Add(this.btnStopPlayback);
+            this.panelPlayback.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelPlayback.Location = new System.Drawing.Point(0, 220);
+            this.panelPlayback.Name = "panelPlayback";
+            this.panelPlayback.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
+            this.panelPlayback.Size = new System.Drawing.Size(700, 160);
+            this.panelPlayback.TabIndex = 2;
+            
+            // lblPlaybackTitle
+            this.lblPlaybackTitle.AutoSize = true;
+            this.lblPlaybackTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblPlaybackTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
+            this.lblPlaybackTitle.Location = new System.Drawing.Point(27, 15);
+            this.lblPlaybackTitle.Name = "lblPlaybackTitle";
+            this.lblPlaybackTitle.Size = new System.Drawing.Size(162, 25);
+            this.lblPlaybackTitle.TabIndex = 3;
+            this.lblPlaybackTitle.Text = "Воспроизведение:";
+            
             // btnPlay
-            // 
-            this.btnPlay.Location = new System.Drawing.Point(20, 80);
+            this.btnPlay.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnPlay.FlatAppearance.BorderSize = 0;
+            this.btnPlay.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPlay.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnPlay.ForeColor = System.Drawing.Color.White;
+            this.btnPlay.Location = new System.Drawing.Point(30, 50);
             this.btnPlay.Name = "btnPlay";
-            this.btnPlay.Size = new System.Drawing.Size(140, 45);
-            this.btnPlay.TabIndex = 2;
-            this.btnPlay.Text = "Воспроизвести (F11)";
-            this.btnPlay.UseVisualStyleBackColor = true;
+            this.btnPlay.Size = new System.Drawing.Size(200, 50);
+            this.btnPlay.TabIndex = 0;
+            this.btnPlay.Text = "▶ ВОСПРОИЗВЕСТИ (F11)";
+            this.btnPlay.UseVisualStyleBackColor = false;
             this.btnPlay.Click += new System.EventHandler(this.btnPlay_Click);
-            // 
+            
             // btnPlayLoop
-            // 
-            this.btnPlayLoop.Location = new System.Drawing.Point(170, 80);
+            this.btnPlayLoop.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnPlayLoop.FlatAppearance.BorderSize = 0;
+            this.btnPlayLoop.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPlayLoop.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnPlayLoop.ForeColor = System.Drawing.Color.White;
+            this.btnPlayLoop.Location = new System.Drawing.Point(250, 50);
             this.btnPlayLoop.Name = "btnPlayLoop";
-            this.btnPlayLoop.Size = new System.Drawing.Size(140, 45);
-            this.btnPlayLoop.TabIndex = 3;
-            this.btnPlayLoop.Text = "Цикл (F12)";
-            this.btnPlayLoop.UseVisualStyleBackColor = true;
+            this.btnPlayLoop.Size = new System.Drawing.Size(200, 50);
+            this.btnPlayLoop.TabIndex = 1;
+            this.btnPlayLoop.Text = "🔄 ЦИКЛ (F12)";
+            this.btnPlayLoop.UseVisualStyleBackColor = false;
             this.btnPlayLoop.Click += new System.EventHandler(this.btnPlayLoop_Click);
-            // 
-            // btnStopPlay
-            // 
-            this.btnStopPlay.Location = new System.Drawing.Point(320, 80);
-            this.btnStopPlay.Name = "btnStopPlay";
-            this.btnStopPlay.Size = new System.Drawing.Size(160, 45);
-            this.btnStopPlay.TabIndex = 4;
-            this.btnStopPlay.Text = "Стоп воспроизведения (Backquote)";
-            this.btnStopPlay.UseVisualStyleBackColor = true;
-            this.btnStopPlay.Click += new System.EventHandler(this.btnStopPlay_Click);
-            // 
+            
+            // btnStopPlayback
+            this.btnStopPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnStopPlayback.FlatAppearance.BorderSize = 0;
+            this.btnStopPlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStopPlayback.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnStopPlayback.ForeColor = System.Drawing.Color.White;
+            this.btnStopPlayback.Location = new System.Drawing.Point(470, 50);
+            this.btnStopPlayback.Name = "btnStopPlayback";
+            this.btnStopPlayback.Size = new System.Drawing.Size(200, 50);
+            this.btnStopPlayback.TabIndex = 2;
+            this.btnStopPlayback.Text = "⏹ ОСТАНОВИТЬ (`)";
+            this.btnStopPlayback.UseVisualStyleBackColor = false;
+            this.btnStopPlayback.Click += new System.EventHandler(this.btnStopPlay_Click);
+            
+            // panelStatus
+            this.panelStatus.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
+            this.panelStatus.Controls.Add(this.lblStatus);
+            this.panelStatus.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelStatus.Location = new System.Drawing.Point(0, 380);
+            this.panelStatus.Name = "panelStatus";
+            this.panelStatus.Size = new System.Drawing.Size(700, 70);
+            this.panelStatus.TabIndex = 3;
+            
             // lblStatus
-            // 
-            this.lblStatus.AutoSize = true;
-            this.lblStatus.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.lblStatus.Location = new System.Drawing.Point(20, 140);
+            this.lblStatus.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblStatus.Location = new System.Drawing.Point(0, 0);
             this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(65, 20);
-            this.lblStatus.TabIndex = 5;
-            this.lblStatus.Text = "Готов";
-            // 
+            this.lblStatus.Size = new System.Drawing.Size(700, 70);
+            this.lblStatus.TabIndex = 0;
+            this.lblStatus.Text = "● ГОТОВ К РАБОТЕ";
+            this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            
+            // panelHotkeys
+            this.panelHotkeys.BackColor = System.Drawing.Color.White;
+            this.panelHotkeys.Controls.Add(this.lblHotkeys);
+            this.panelHotkeys.Controls.Add(this.lblHotkeysTitle);
+            this.panelHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelHotkeys.Location = new System.Drawing.Point(0, 450);
+            this.panelHotkeys.Name = "panelHotkeys";
+            this.panelHotkeys.Size = new System.Drawing.Size(700, 150);
+            this.panelHotkeys.TabIndex = 4;
+            
             // lblHotkeys
-            // 
-            this.lblHotkeys.AutoSize = true;
-            this.lblHotkeys.Location = new System.Drawing.Point(20, 180);
+            this.lblHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.lblHotkeys.Location = new System.Drawing.Point(0, 30);
             this.lblHotkeys.Name = "lblHotkeys";
-            this.lblHotkeys.Size = new System.Drawing.Size(0, 13);
-            this.lblHotkeys.TabIndex = 6;
-            // 
-            // btnSettings
-            // 
-            this.btnSettings.Location = new System.Drawing.Point(320, 20);
-            this.btnSettings.Name = "btnSettings";
-            this.btnSettings.Size = new System.Drawing.Size(160, 45);
-            this.btnSettings.TabIndex = 7;
-            this.btnSettings.Text = "Информация";
-            this.btnSettings.UseVisualStyleBackColor = true;
-            this.btnSettings.Click += new System.EventHandler(this.btnSettings_Click);
-            // 
+            this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
+            this.lblHotkeys.Size = new System.Drawing.Size(700, 120);
+            this.lblHotkeys.TabIndex = 1;
+            this.lblHotkeys.Text = "F9 - Начать запись макроса\r\nF10 - Остановить запись\r\nF11 - Воспроизвести макрос о" +
+    "дин раз\r\nF12 - Воспроизводить макрос в цикле\r\n` (Backquote) - Остановить воспрои" +
+    "зведение";
+            
+            // lblHotkeysTitle
+            this.lblHotkeysTitle.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.lblHotkeysTitle.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblHotkeysTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.lblHotkeysTitle.ForeColor = System.Drawing.Color.White;
+            this.lblHotkeysTitle.Location = new System.Drawing.Point(0, 0);
+            this.lblHotkeysTitle.Name = "lblHotkeysTitle";
+            this.lblHotkeysTitle.Size = new System.Drawing.Size(700, 30);
+            this.lblHotkeysTitle.TabIndex = 0;
+            this.lblHotkeysTitle.Text = "Горячие клавиши:";
+            this.lblHotkeysTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            
             // MainForm
-            // 
-            this.ClientSize = new System.Drawing.Size(500, 280);
-            this.Controls.Add(this.btnSettings);
-            this.Controls.Add(this.lblHotkeys);
-            this.Controls.Add(this.lblStatus);
-            this.Controls.Add(this.btnStopPlay);
-            this.Controls.Add(this.btnPlayLoop);
-            this.Controls.Add(this.btnPlay);
-            this.Controls.Add(this.btnStopRecord);
-            this.Controls.Add(this.btnStartRecord);
-            this.MinimumSize = new System.Drawing.Size(516, 319);
+            this.BackColor = System.Drawing.Color.Gray;
+            this.ClientSize = new System.Drawing.Size(700, 620);
+            this.Controls.Add(this.panelHotkeys);
+            this.Controls.Add(this.panelStatus);
+            this.Controls.Add(this.panelPlayback);
+            this.Controls.Add(this.panelRecording);
+            this.Controls.Add(this.panelHeader);
+            this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
+            this.MinimumSize = new System.Drawing.Size(716, 639);
             this.Name = "MainForm";
-            this.Text = "Macro Recorder GUI";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "Macro Recorder";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.panelHeader.ResumeLayout(false);
+            this.panelRecording.ResumeLayout(false);
+            this.panelRecording.PerformLayout();
+            this.panelPlayback.ResumeLayout(false);
+            this.panelPlayback.PerformLayout();
+            this.panelStatus.ResumeLayout(false);
+            this.panelHotkeys.ResumeLayout(false);
             this.ResumeLayout(false);
-            this.PerformLayout();
-
         }
 
         #endregion
 
+        private Panel panelHeader;
+        private Label lblTitle;
+        private Panel panelRecording;
         private Button btnStartRecord;
         private Button btnStopRecord;
+        private Panel panelPlayback;
         private Button btnPlay;
         private Button btnPlayLoop;
-        private Button btnStopPlay;
+        private Button btnStopPlayback;
+        private Panel panelStatus;
         private Label lblStatus;
+        private Panel panelHotkeys;
         private Label lblHotkeys;
-        private Button btnSettings;
+        private Label lblHotkeysTitle;
+        private Label lblRecordingTitle;
+        private Label lblPlaybackTitle;
     }
 }
