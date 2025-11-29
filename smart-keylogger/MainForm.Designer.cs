@@ -21,11 +21,12 @@ namespace MacroRecorderGUI
             this.panelHeader = new System.Windows.Forms.Panel();
             this.lblTitle = new System.Windows.Forms.Label();
             this.panelRecording = new System.Windows.Forms.Panel();
-            this.btnPauseRecord = new System.Windows.Forms.Button(); // НОВАЯ кнопка
+            this.btnPauseRecord = new System.Windows.Forms.Button();
             this.lblRecordingTitle = new System.Windows.Forms.Label();
             this.btnStartRecord = new System.Windows.Forms.Button();
             this.btnStopRecord = new System.Windows.Forms.Button();
             this.panelPlayback = new System.Windows.Forms.Panel();
+            this.btnPausePlayback = new System.Windows.Forms.Button();
             this.lblPlaybackTitle = new System.Windows.Forms.Label();
             this.btnPlay = new System.Windows.Forms.Button();
             this.btnPlayLoop = new System.Windows.Forms.Button();
@@ -64,7 +65,7 @@ namespace MacroRecorderGUI
             
             // panelRecording
             this.panelRecording.BackColor = System.Drawing.Color.White;
-            this.panelRecording.Controls.Add(this.btnPauseRecord); // НОВАЯ кнопка
+            this.panelRecording.Controls.Add(this.btnPauseRecord);
             this.panelRecording.Controls.Add(this.lblRecordingTitle);
             this.panelRecording.Controls.Add(this.btnStartRecord);
             this.panelRecording.Controls.Add(this.btnStopRecord);
@@ -72,10 +73,10 @@ namespace MacroRecorderGUI
             this.panelRecording.Location = new System.Drawing.Point(0, 80);
             this.panelRecording.Name = "panelRecording";
             this.panelRecording.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.panelRecording.Size = new System.Drawing.Size(700, 200); // Увеличил высоту для новой кнопки
+            this.panelRecording.Size = new System.Drawing.Size(700, 200);
             this.panelRecording.TabIndex = 1;
             
-            // btnPauseRecord - НОВАЯ кнопка
+            // btnPauseRecord
             this.btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
             this.btnPauseRecord.FlatAppearance.BorderSize = 0;
             this.btnPauseRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -129,16 +130,31 @@ namespace MacroRecorderGUI
             
             // panelPlayback
             this.panelPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
+            this.panelPlayback.Controls.Add(this.btnPausePlayback);
             this.panelPlayback.Controls.Add(this.lblPlaybackTitle);
             this.panelPlayback.Controls.Add(this.btnPlay);
             this.panelPlayback.Controls.Add(this.btnPlayLoop);
             this.panelPlayback.Controls.Add(this.btnStopPlayback);
             this.panelPlayback.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelPlayback.Location = new System.Drawing.Point(0, 280); // Изменил позицию из-за увеличенной высоты panelRecording
+            this.panelPlayback.Location = new System.Drawing.Point(0, 280);
             this.panelPlayback.Name = "panelPlayback";
             this.panelPlayback.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.panelPlayback.Size = new System.Drawing.Size(700, 160);
+            this.panelPlayback.Size = new System.Drawing.Size(700, 220);
             this.panelPlayback.TabIndex = 2;
+            
+            // btnPausePlayback
+            this.btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
+            this.btnPausePlayback.FlatAppearance.BorderSize = 0;
+            this.btnPausePlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPausePlayback.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnPausePlayback.ForeColor = System.Drawing.Color.White;
+            this.btnPausePlayback.Location = new System.Drawing.Point(30, 120);
+            this.btnPausePlayback.Name = "btnPausePlayback";
+            this.btnPausePlayback.Size = new System.Drawing.Size(640, 50);
+            this.btnPausePlayback.TabIndex = 4;
+            this.btnPausePlayback.Text = "⏸ ПАУЗА ВОСПРОИЗВЕДЕНИЯ (HOME)"; // ИЗМЕНЕНО: SCROLL -> HOME
+            this.btnPausePlayback.UseVisualStyleBackColor = false;
+            this.btnPausePlayback.Click += new System.EventHandler(this.btnPausePlayback_Click);
             
             // lblPlaybackTitle
             this.lblPlaybackTitle.AutoSize = true;
@@ -196,7 +212,7 @@ namespace MacroRecorderGUI
             this.panelStatus.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
             this.panelStatus.Controls.Add(this.lblStatus);
             this.panelStatus.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelStatus.Location = new System.Drawing.Point(0, 440); // Изменил позицию
+            this.panelStatus.Location = new System.Drawing.Point(0, 500);
             this.panelStatus.Name = "panelStatus";
             this.panelStatus.Size = new System.Drawing.Size(700, 70);
             this.panelStatus.TabIndex = 3;
@@ -216,22 +232,20 @@ namespace MacroRecorderGUI
             this.panelHotkeys.Controls.Add(this.lblHotkeys);
             this.panelHotkeys.Controls.Add(this.lblHotkeysTitle);
             this.panelHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelHotkeys.Location = new System.Drawing.Point(0, 510); // Изменил позицию
+            this.panelHotkeys.Location = new System.Drawing.Point(0, 570);
             this.panelHotkeys.Name = "panelHotkeys";
-            this.panelHotkeys.Size = new System.Drawing.Size(700, 110); // Уменьшил высоту из-за увеличенной формы
+            this.panelHotkeys.Size = new System.Drawing.Size(700, 50);
             this.panelHotkeys.TabIndex = 4;
             
             // lblHotkeys
             this.lblHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.lblHotkeys.Location = new System.Drawing.Point(0, 30);
             this.lblHotkeys.Name = "lblHotkeys";
-            this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.lblHotkeys.Size = new System.Drawing.Size(700, 80);
+            this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 5, 30, 5);
+            this.lblHotkeys.Size = new System.Drawing.Size(700, 20);
             this.lblHotkeys.TabIndex = 1;
-            this.lblHotkeys.Text = "F9 - Начать запись макроса\r\nF10 - Остановить запись\r\nPAUSE - Пауза/продолжение за" +
-    "писи\r\nF11 - Воспроизвести макрос один раз\r\nF12 - Воспроизводить макрос в цикле\r\n" +
-    "` - Остановить воспроизведение";
+            this.lblHotkeys.Text = "F9-Запись | F10-Стоп | PAUSE-Пауза записи | F11-Воспроизвести | F12-Цикл | HOME-Пауза воспр. | `-Стоп"; // ИЗМЕНЕНО: SCROLL -> HOME
             
             // lblHotkeysTitle
             this.lblHotkeysTitle.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
@@ -247,7 +261,7 @@ namespace MacroRecorderGUI
             
             // MainForm
             this.BackColor = System.Drawing.Color.Gray;
-            this.ClientSize = new System.Drawing.Size(700, 700);
+            this.ClientSize = new System.Drawing.Size(700, 620);
             this.Controls.Add(this.panelHotkeys);
             this.Controls.Add(this.panelStatus);
             this.Controls.Add(this.panelPlayback);
@@ -287,6 +301,7 @@ namespace MacroRecorderGUI
         private Label lblHotkeysTitle;
         private Label lblRecordingTitle;
         private Label lblPlaybackTitle;
-        private Button btnPauseRecord; // НОВАЯ кнопка
+        private Button btnPauseRecord;
+        private Button btnPausePlayback;
     }
 }
