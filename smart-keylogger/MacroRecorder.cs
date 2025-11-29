@@ -1,4 +1,4 @@
-// Modified MacroRecorder.cs - с фильтрацией горячих клавиш
+// Modified MacroRecorder.cs - с фильтрацией горячих клавиш и поддержкой паузы
 using SharpHook;
 using SharpHook.Native;
 using System;
@@ -11,7 +11,10 @@ public class MacroRecorder
     private TaskPoolGlobalHook? hook;
     private List<InputEvent> recordedEvents = new List<InputEvent>();
     private bool isRecording = false;
+    private bool isPaused = false; // НОВОЕ поле для состояния паузы
     private DateTime recordingStartTime;
+    private DateTime pauseStartTime;
+    private long totalPauseDuration = 0; // Общее время паузы в тиках
 
     // Список кодов горячих клавиш которые нужно игнорировать
     private HashSet<int> ignoredKeyCodes = new HashSet<int>
@@ -20,8 +23,12 @@ public class MacroRecorder
         0x79, // F10  
         0x7A, // F11
         0x7B, // F12
-        0xC0  // ` (~)
+        0xC0, // ` (~)
+        0x13  // Pause/Break - НОВАЯ игнорируемая клавиша
     };
+
+    // НОВОЕ свойство для проверки состояния паузы
+    public bool IsPaused => isPaused;
 
     // Конвертер кодов прямо внутри класса
     private int SharpHookToVirtualKey(KeyCode sharpHookKeyCode)
@@ -83,6 +90,7 @@ public class MacroRecorder
             KeyCode.VcPrintScreen => 0x2C, // Print Screen
             KeyCode.VcLeftMeta => 0x5B,
             KeyCode.VcRightMeta => 0x5C,
+            KeyCode.VcPause => 0x13,    // Pause/Break
             // По умолчанию оставляем как есть
             _ => (int)sharpHookKeyCode
         };
@@ -92,6 +100,8 @@ public class MacroRecorder
     {
         recordedEvents.Clear();
         isRecording = true;
+        isPaused = false;
+        totalPauseDuration = 0;
         recordingStartTime = DateTime.Now;
         
         hook = new TaskPoolGlobalHook();
@@ -106,9 +116,30 @@ public class MacroRecorder
         hook.RunAsync();
     }
 
+    // НОВЫЙ метод для паузы записи
+    public void PauseRecording()
+    {
+        if (!isRecording || isPaused) return;
+        
+        isPaused = true;
+        pauseStartTime = DateTime.Now;
+        Console.WriteLine("Запись приостановлена");
+    }
+
+    // НОВЫЙ метод для возобновления записи
+    public void ResumeRecording()
+    {
+        if (!isRecording || !isPaused) return;
+        
+        isPaused = false;
+        totalPauseDuration += (DateTime.Now - pauseStartTime).Ticks;
+        Console.WriteLine("Запись возобновлена");
+    }
+
     public void StopRecording()
     {
         isRecording = false;
+        isPaused = false;
         hook?.Dispose();
         hook = null;
         Console.WriteLine("Запись остановлена.");
@@ -116,24 +147,26 @@ public class MacroRecorder
 
     private void OnMouseMoved(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
         
         TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
         
         recordedEvents.Add(new InputEvent
         {
             EventType = "MouseMove",
             X = e.Data.X,
             Y = e.Data.Y,
-            Timestamp = elapsed.Ticks
+            Timestamp = adjustedTicks
         });
     }
 
     private void OnMousePressed(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
         
         TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
         
         recordedEvents.Add(new InputEvent
         {
@@ -142,15 +175,16 @@ public class MacroRecorder
             Y = e.Data.Y,
             MouseButton = (int)e.Data.Button,
             IsPressed = true,
-            Timestamp = elapsed.Ticks
+            Timestamp = adjustedTicks
         });
     }
 
     private void OnMouseReleased(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
         
         TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
         
         recordedEvents.Add(new InputEvent
         {
@@ -159,7 +193,7 @@ public class MacroRecorder
             Y = e.Data.Y,
             MouseButton = (int)e.Data.Button,
             IsPressed = false,
-            Timestamp = elapsed.Ticks
+            Timestamp = adjustedTicks
         });
     }
 
@@ -170,7 +204,7 @@ public class MacroRecorder
 
     private void OnKeyPressed(object? sender, KeyboardHookEventArgs e)
     {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
         
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
         
@@ -182,13 +216,14 @@ public class MacroRecorder
         }
         
         TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
         
         recordedEvents.Add(new InputEvent
         {
             EventType = "KeyPress",
             KeyCode = virtualKeyCode,
             IsPressed = true,
-            Timestamp = elapsed.Ticks
+            Timestamp = adjustedTicks
         });
         
         Console.WriteLine($"Записана клавиша: VK=0x{virtualKeyCode:X2}, SharpHook={e.Data.KeyCode}");
@@ -196,7 +231,7 @@ public class MacroRecorder
 
     private void OnKeyReleased(object? sender, KeyboardHookEventArgs e)
     {
-        if (!isRecording) return;
+        if (!isRecording || isPaused) return;
         
         int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
         
@@ -208,13 +243,14 @@ public class MacroRecorder
         }
         
         TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
         
         recordedEvents.Add(new InputEvent
         {
             EventType = "KeyPress",
             KeyCode = virtualKeyCode,
             IsPressed = false,
-            Timestamp = elapsed.Ticks
+            Timestamp = adjustedTicks
         });
     }
 
@@ -274,7 +310,7 @@ public class MacroRecorder
     }
 
     public int GetRecordedEventsCount()
-{
-    return recordedEvents.Count;
-}
+    {
+        return recordedEvents.Count;
+    }
 }

@@ -26,9 +26,11 @@ namespace MacroRecorderGUI
         private const int HOTKEY_PLAY = 3;
         private const int HOTKEY_PLAY_LOOP = 4;
         private const int HOTKEY_STOP_PLAY = 5;
+        private const int HOTKEY_PAUSE_RECORD = 6; // НОВАЯ горячая клавиша для паузы
 
         // Код клавиши Backquote ( ` )
         private const uint VK_BACKQUOTE = 0xC0;
+        private const uint VK_PAUSE = 0x13; // Код клавиши Pause/Break
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -60,6 +62,7 @@ namespace MacroRecorderGUI
             RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
             RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_NONE, (uint)Keys.F12);
             RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
+            RegisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD, MOD_NONE, VK_PAUSE); // НОВАЯ регистрация
         }
 
         private void UnregisterGlobalHotkeys()
@@ -69,6 +72,7 @@ namespace MacroRecorderGUI
             UnregisterHotKey(this.Handle, HOTKEY_PLAY);
             UnregisterHotKey(this.Handle, HOTKEY_PLAY_LOOP);
             UnregisterHotKey(this.Handle, HOTKEY_STOP_PLAY);
+            UnregisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD); // НОВАЯ отмена регистрации
         }
 
         protected override void WndProc(ref Message m)
@@ -91,6 +95,9 @@ namespace MacroRecorderGUI
                         break;
                     case HOTKEY_STOP_PLAY:
                         BeginInvoke(new Action(StopPlayback));
+                        break;
+                    case HOTKEY_PAUSE_RECORD: // НОВЫЙ случай для паузы
+                        BeginInvoke(new Action(TogglePauseRecording));
                         break;
                 }
                 return;
@@ -126,8 +133,32 @@ namespace MacroRecorderGUI
                 PlayMacroLoop();
                 return true;
             }
+            else if (keyData == Keys.Pause && isRecording) // НОВАЯ обработка Pause
+            {
+                TogglePauseRecording();
+                return true;
+            }
             
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        // НОВЫЙ метод для переключения паузы записи
+        private void TogglePauseRecording()
+        {
+            if (!isRecording || recorder == null) return;
+
+            if (recorder.IsPaused)
+            {
+                recorder.ResumeRecording();
+                Console.WriteLine("Запись возобновлена");
+            }
+            else
+            {
+                recorder.PauseRecording();
+                Console.WriteLine("Запись приостановлена");
+            }
+            
+            UpdateUI();
         }
 
         private async void StartRecording()
@@ -239,9 +270,18 @@ namespace MacroRecorderGUI
             {
                 if (isRecording)
                 {
-                    lblStatus.Text = "⚫ ИДЕТ ЗАПИСЬ МАКРОСА...";
-                    lblStatus.ForeColor = System.Drawing.Color.FromArgb(244, 67, 54);
-                    lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 235, 238);
+                    if (recorder != null && recorder.IsPaused)
+                    {
+                        lblStatus.Text = "⏸ ЗАПИСЬ ПРИОСТАНОВЛЕНА... (PAUSE ДЛЯ ПРОДОЛЖЕНИЯ)";
+                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(255, 152, 0);
+                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 243, 224);
+                    }
+                    else
+                    {
+                        lblStatus.Text = "⚫ ИДЕТ ЗАПИСЬ МАКРОСА... (PAUSE ДЛЯ ПАУЗЫ)";
+                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(244, 67, 54);
+                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 235, 238);
+                    }
                 }
                 else if (isPlaying)
                 {
@@ -263,6 +303,7 @@ namespace MacroRecorderGUI
             // Запись
             btnStartRecord.Enabled = !isRecording && !isPlaying;
             btnStopRecord.Enabled = isRecording && !isPlaying;
+            btnPauseRecord.Enabled = isRecording && !isPlaying; // НОВАЯ кнопка
 
             // Воспроизведение
             btnPlay.Enabled = !isRecording && !isPlaying;
@@ -272,9 +313,25 @@ namespace MacroRecorderGUI
             // Обновляем внешний вид кнопок
             UpdateButtonAppearance(btnStartRecord, !isRecording && !isPlaying);
             UpdateButtonAppearance(btnStopRecord, isRecording && !isPlaying);
+            UpdateButtonAppearance(btnPauseRecord, isRecording && !isPlaying); // НОВАЯ кнопка
             UpdateButtonAppearance(btnPlay, !isRecording && !isPlaying);
             UpdateButtonAppearance(btnPlayLoop, !isRecording && !isPlaying);
             UpdateButtonAppearance(btnStopPlayback, isPlaying && !isRecording);
+
+            // Обновляем текст кнопки паузы в зависимости от состояния
+            if (recorder != null && isRecording)
+            {
+                if (recorder.IsPaused)
+                {
+                    btnPauseRecord.Text = "▶ ПРОДОЛЖИТЬ ЗАПИСЬ (PAUSE)";
+                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(76, 175, 80); // Зеленый для продолжения
+                }
+                else
+                {
+                    btnPauseRecord.Text = "⏸ ПАУЗА ЗАПИСИ (PAUSE)";
+                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(255, 152, 0); // Оранжевый для паузы
+                }
+            }
         }
 
         private void UpdateButtonAppearance(Button button, bool enabled)
@@ -301,11 +358,17 @@ namespace MacroRecorderGUI
             }
         }
 
-        // Убери старый метод btnStopPlay_Click и замени на:
+        // НОВЫЙ обработчик для кнопки паузы
+        private void btnPauseRecord_Click(object sender, EventArgs e)
+        {
+            TogglePauseRecording();
+        }
+
         private void btnStopPlay_Click(object sender, EventArgs e)
         {
             StopPlayback();
         }
+
         private void UpdateButtonAppearance()
         {
             // Функция для установки прозрачности неактивных кнопок
@@ -326,6 +389,7 @@ namespace MacroRecorderGUI
 
             SetButtonState(btnStartRecord, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(76, 175, 80));
             SetButtonState(btnStopRecord, isRecording && !isPlaying, System.Drawing.Color.FromArgb(244, 67, 54));
+            SetButtonState(btnPauseRecord, isRecording && !isPlaying, System.Drawing.Color.FromArgb(255, 152, 0)); // НОВАЯ кнопка
             SetButtonState(btnPlay, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(33, 150, 243));
             SetButtonState(btnPlayLoop, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(156, 39, 176));
             SetButtonState(btnStopPlayback, isPlaying && !isRecording, System.Drawing.Color.FromArgb(255, 152, 0));
@@ -350,6 +414,7 @@ namespace MacroRecorderGUI
         {
             PlayMacroLoop();
         }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (isRecording && recorder != null)
@@ -371,6 +436,7 @@ namespace MacroRecorderGUI
         {
             MessageBox.Show("Горячие клавиши работают даже когда окно свернуто!\n\n" +
                            "Для остановки воспроизведения нажмите ` (Backquote) - клавиша над Tab\n" +
+                           "Для паузы записи нажмите Pause/Break\n" +
                            "Обычно находится слева от цифры 1 на стандартной клавиатуре", 
                            "Информация", 
                            MessageBoxButtons.OK, 

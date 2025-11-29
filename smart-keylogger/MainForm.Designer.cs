@@ -21,6 +21,7 @@ namespace MacroRecorderGUI
             this.panelHeader = new System.Windows.Forms.Panel();
             this.lblTitle = new System.Windows.Forms.Label();
             this.panelRecording = new System.Windows.Forms.Panel();
+            this.btnPauseRecord = new System.Windows.Forms.Button(); // НОВАЯ кнопка
             this.lblRecordingTitle = new System.Windows.Forms.Label();
             this.btnStartRecord = new System.Windows.Forms.Button();
             this.btnStopRecord = new System.Windows.Forms.Button();
@@ -63,6 +64,7 @@ namespace MacroRecorderGUI
             
             // panelRecording
             this.panelRecording.BackColor = System.Drawing.Color.White;
+            this.panelRecording.Controls.Add(this.btnPauseRecord); // НОВАЯ кнопка
             this.panelRecording.Controls.Add(this.lblRecordingTitle);
             this.panelRecording.Controls.Add(this.btnStartRecord);
             this.panelRecording.Controls.Add(this.btnStopRecord);
@@ -70,8 +72,22 @@ namespace MacroRecorderGUI
             this.panelRecording.Location = new System.Drawing.Point(0, 80);
             this.panelRecording.Name = "panelRecording";
             this.panelRecording.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.panelRecording.Size = new System.Drawing.Size(700, 140);
+            this.panelRecording.Size = new System.Drawing.Size(700, 200); // Увеличил высоту для новой кнопки
             this.panelRecording.TabIndex = 1;
+            
+            // btnPauseRecord - НОВАЯ кнопка
+            this.btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
+            this.btnPauseRecord.FlatAppearance.BorderSize = 0;
+            this.btnPauseRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPauseRecord.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnPauseRecord.ForeColor = System.Drawing.Color.White;
+            this.btnPauseRecord.Location = new System.Drawing.Point(30, 120);
+            this.btnPauseRecord.Name = "btnPauseRecord";
+            this.btnPauseRecord.Size = new System.Drawing.Size(640, 50);
+            this.btnPauseRecord.TabIndex = 3;
+            this.btnPauseRecord.Text = "⏸ ПАУЗА ЗАПИСИ (PAUSE)";
+            this.btnPauseRecord.UseVisualStyleBackColor = false;
+            this.btnPauseRecord.Click += new System.EventHandler(this.btnPauseRecord_Click);
             
             // lblRecordingTitle
             this.lblRecordingTitle.AutoSize = true;
@@ -118,7 +134,7 @@ namespace MacroRecorderGUI
             this.panelPlayback.Controls.Add(this.btnPlayLoop);
             this.panelPlayback.Controls.Add(this.btnStopPlayback);
             this.panelPlayback.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelPlayback.Location = new System.Drawing.Point(0, 220);
+            this.panelPlayback.Location = new System.Drawing.Point(0, 280); // Изменил позицию из-за увеличенной высоты panelRecording
             this.panelPlayback.Name = "panelPlayback";
             this.panelPlayback.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
             this.panelPlayback.Size = new System.Drawing.Size(700, 160);
@@ -180,7 +196,7 @@ namespace MacroRecorderGUI
             this.panelStatus.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
             this.panelStatus.Controls.Add(this.lblStatus);
             this.panelStatus.Dock = System.Windows.Forms.DockStyle.Top;
-            this.panelStatus.Location = new System.Drawing.Point(0, 380);
+            this.panelStatus.Location = new System.Drawing.Point(0, 440); // Изменил позицию
             this.panelStatus.Name = "panelStatus";
             this.panelStatus.Size = new System.Drawing.Size(700, 70);
             this.panelStatus.TabIndex = 3;
@@ -200,9 +216,9 @@ namespace MacroRecorderGUI
             this.panelHotkeys.Controls.Add(this.lblHotkeys);
             this.panelHotkeys.Controls.Add(this.lblHotkeysTitle);
             this.panelHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelHotkeys.Location = new System.Drawing.Point(0, 450);
+            this.panelHotkeys.Location = new System.Drawing.Point(0, 510); // Изменил позицию
             this.panelHotkeys.Name = "panelHotkeys";
-            this.panelHotkeys.Size = new System.Drawing.Size(700, 150);
+            this.panelHotkeys.Size = new System.Drawing.Size(700, 110); // Уменьшил высоту из-за увеличенной формы
             this.panelHotkeys.TabIndex = 4;
             
             // lblHotkeys
@@ -211,11 +227,11 @@ namespace MacroRecorderGUI
             this.lblHotkeys.Location = new System.Drawing.Point(0, 30);
             this.lblHotkeys.Name = "lblHotkeys";
             this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.lblHotkeys.Size = new System.Drawing.Size(700, 120);
+            this.lblHotkeys.Size = new System.Drawing.Size(700, 80);
             this.lblHotkeys.TabIndex = 1;
-            this.lblHotkeys.Text = "F9 - Начать запись макроса\r\nF10 - Остановить запись\r\nF11 - Воспроизвести макрос о" +
-    "дин раз\r\nF12 - Воспроизводить макрос в цикле\r\n` (Backquote) - Остановить воспрои" +
-    "зведение";
+            this.lblHotkeys.Text = "F9 - Начать запись макроса\r\nF10 - Остановить запись\r\nPAUSE - Пауза/продолжение за" +
+    "писи\r\nF11 - Воспроизвести макрос один раз\r\nF12 - Воспроизводить макрос в цикле\r\n" +
+    "` - Остановить воспроизведение";
             
             // lblHotkeysTitle
             this.lblHotkeysTitle.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
@@ -231,7 +247,7 @@ namespace MacroRecorderGUI
             
             // MainForm
             this.BackColor = System.Drawing.Color.Gray;
-            this.ClientSize = new System.Drawing.Size(700, 620);
+            this.ClientSize = new System.Drawing.Size(700, 700);
             this.Controls.Add(this.panelHotkeys);
             this.Controls.Add(this.panelStatus);
             this.Controls.Add(this.panelPlayback);
@@ -271,5 +287,6 @@ namespace MacroRecorderGUI
         private Label lblHotkeysTitle;
         private Label lblRecordingTitle;
         private Label lblPlaybackTitle;
+        private Button btnPauseRecord; // НОВАЯ кнопка
     }
 }
