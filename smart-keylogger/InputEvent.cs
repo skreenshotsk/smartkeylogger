@@ -9,6 +9,12 @@ public class InputEvent
     public bool IsPressed { get; set; }
 }
 
+public class MacroData
+{
+    public List<InputEvent> Events { get; set; } = new List<InputEvent>();
+    public long? KeyboardLayout { get; set; } // Сохраняем как long для JSON сериализации
+}
+
 [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
 public struct POINT
 {

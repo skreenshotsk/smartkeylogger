@@ -15,8 +15,10 @@ namespace MacroRecorderGUI
         private CancellationTokenSource? playbackCancellation;
         private bool isPlaying = false;
         private bool isRecording = false;
-        private System.Windows.Forms.Timer? recordingTimer;
         
+        // НОВЫЙ таймер для обновления времени записи
+        private System.Windows.Forms.Timer? recordingTimer;
+
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
         private const int WM_HOTKEY = 0x0312;
@@ -46,7 +48,7 @@ namespace MacroRecorderGUI
             InitializeComponent();
             InitializeComponents();
             RegisterGlobalHotkeys();
-            InitializeTimer();
+            InitializeTimer(); // НОВЫЙ вызов
         }
 
         private void InitializeTimer()
@@ -84,8 +86,28 @@ namespace MacroRecorderGUI
             recorder = new MacroRecorder();
             player = new MacroPlayer();
             playbackCancellation = new CancellationTokenSource();
+            
+            // Передаем ссылку на форму для логирования
+            recorder.SetLogCallback(AddLog);
+            player.SetLogCallback(AddLog);
 
             UpdateUI();
+        }
+        
+        private void AddLog(string message)
+        {
+            if (txtLogs == null) return;
+            
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string>(AddLog), message);
+                return;
+            }
+            
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            txtLogs.AppendText($"[{timestamp}] {message}\n");
+            txtLogs.SelectionStart = txtLogs.Text.Length;
+            txtLogs.ScrollToCaret();
         }
 
         private void RegisterGlobalHotkeys()
@@ -136,7 +158,15 @@ namespace MacroRecorderGUI
                         BeginInvoke(new Action(TogglePauseRecording));
                         break;
                     case HOTKEY_PAUSE_PLAYBACK:
-                        BeginInvoke(new Action(TogglePausePlayback));
+                        // Используем Invoke для немедленного выполнения, но не блокируем WndProc
+                        if (InvokeRequired)
+                        {
+                            BeginInvoke(new Action(TogglePausePlayback));
+                        }
+                        else
+                        {
+                            TogglePausePlayback();
+                        }
                         break;
                 }
                 return;
@@ -189,26 +219,39 @@ namespace MacroRecorderGUI
         private void TogglePausePlayback()
         {
             if (!isPlaying || player == null) return;
+            
+            // Не позволяем паузу во время технической паузы
+            if (!player.PlaybackStarted)
+            {
+                return;
+            }
 
             // Мгновенное переключение без задержек
             if (player.IsPaused)
             {
                 player.ResumePlayback();
-                Console.WriteLine("Воспроизведение возобновлено");
             }
             else
             {
                 player.PausePlayback();
-                Console.WriteLine("Воспроизведение приостановлено");
             }
             
-            UpdateUI();
+            // Обновляем UI асинхронно чтобы не блокировать
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(UpdateUI));
+            }
+            else
+            {
+                UpdateUI();
+            }
         }
 
         private void TogglePauseRecording()
         {
             if (!isRecording || recorder == null) return;
 
+            // Мгновенное переключение без задержек
             if (recorder.IsPaused)
             {
                 recorder.ResumeRecording();
@@ -219,6 +262,8 @@ namespace MacroRecorderGUI
                 recorder.PauseRecording();
                 Console.WriteLine("Запись приостановлена");
             }
+            
+            // Не нужно вызывать UpdateUI() здесь, т.к. таймер сам обновляет статус
         }
 
         private async void StartRecording()
@@ -226,11 +271,13 @@ namespace MacroRecorderGUI
             if (isRecording || isPlaying || recorder == null) return;
 
             isRecording = true;
-            recordingTimer?.Start();
+            bool trackLang = chkTrackLanguage != null && chkTrackLanguage.Checked;
+            AddLog("▶ Начата запись (F9)");
+            recordingTimer?.Start(); // НОВОЕ: запускаем таймер
             UpdateUI();
             
             await Task.Delay(500);
-            recorder.StartRecording();
+            recorder.StartRecording(trackLang);
         }
 
         private void StopRecording()
@@ -238,9 +285,10 @@ namespace MacroRecorderGUI
             if (!isRecording || recorder == null) return;
 
             isRecording = false;
-            recordingTimer?.Stop();
+            recordingTimer?.Stop(); // НОВОЕ: останавливаем таймер
             recorder.StopRecording();
             recorder.SaveToFile();
+            AddLog("⏹ Запись остановлена (F10)");
             UpdateUI();
         }
 
@@ -253,11 +301,27 @@ namespace MacroRecorderGUI
             {
                 isPlaying = true;
                 playbackCancellation = new CancellationTokenSource();
+                AddLog("▶ Запущено воспроизведение (F11)");
                 UpdateUI();
+                
+                // Запускаем задачу для периодического обновления UI во время технической паузы
+                var uiUpdateTask = Task.Run(async () =>
+                {
+                    while (isPlaying && player != null && !player.PlaybackStarted && !playbackCancellation.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(100);
+                        if (InvokeRequired)
+                        {
+                            BeginInvoke(new Action(UpdateUI));
+                        }
+                    }
+                });
+                
+                var keyboardLayout = recorder.GetRecordedKeyboardLayout();
                 
                 try
                 {
-                    await player.PlayEvents(events, false, playbackCancellation.Token);
+                    await player.PlayEvents(events, false, playbackCancellation.Token, keyboardLayout);
                 }
                 catch (OperationCanceledException)
                 {
@@ -283,11 +347,27 @@ namespace MacroRecorderGUI
             {
                 isPlaying = true;
                 playbackCancellation = new CancellationTokenSource();
+                AddLog("🔄 Запущено циклическое воспроизведение (F12)");
                 UpdateUI();
+                
+                var keyboardLayout = recorder.GetRecordedKeyboardLayout();
+                
+                // Запускаем задачу для периодического обновления UI во время технической паузы
+                var uiUpdateTask = Task.Run(async () =>
+                {
+                    while (isPlaying && player != null && !player.PlaybackStarted && !playbackCancellation.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(100);
+                        if (InvokeRequired)
+                        {
+                            BeginInvoke(new Action(UpdateUI));
+                        }
+                    }
+                });
                 
                 try
                 {
-                    await player.PlayEvents(events, true, playbackCancellation.Token);
+                    await player.PlayEvents(events, true, playbackCancellation.Token, keyboardLayout);
                 }
                 catch (OperationCanceledException)
                 {
@@ -311,6 +391,7 @@ namespace MacroRecorderGUI
             playbackCancellation?.Cancel();
             player.Stop();
             isPlaying = false;
+            AddLog("⏹ Воспроизведение остановлено (`)");
             UpdateUI();
             
             Console.WriteLine("Воспроизведение остановлено по запросу пользователя");
@@ -320,7 +401,7 @@ namespace MacroRecorderGUI
         {
             if (this.InvokeRequired)
             {
-                this.Invoke(new Action(UpdateUI));
+                this.BeginInvoke(new Action(UpdateUI));
                 return;
             }
 
@@ -365,7 +446,8 @@ namespace MacroRecorderGUI
             btnPlay.Enabled = !isRecording && !isPlaying;
             btnPlayLoop.Enabled = !isRecording && !isPlaying;
             btnStopPlayback.Enabled = isPlaying && !isRecording;
-            btnPausePlayback.Enabled = isPlaying && !isRecording;
+            // Кнопка паузы доступна только после начала реального воспроизведения
+            btnPausePlayback.Enabled = isPlaying && !isRecording && (player?.PlaybackStarted ?? false);
 
             // Обновляем внешний вид кнопок
             UpdateButtonAppearance(btnStartRecord, !isRecording && !isPlaying);
@@ -394,7 +476,12 @@ namespace MacroRecorderGUI
             // Обновляем текст кнопки паузы воспроизведения в зависимости от состояния
             if (player != null && isPlaying)
             {
-                if (player.IsPaused)
+                if (!player.PlaybackStarted)
+                {
+                    btnPausePlayback.Text = "⏸ ПАУЗА (ОЖИДАНИЕ НАЧАЛА...)";
+                    btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(189, 189, 189); // Серый - недоступна
+                }
+                else if (player.IsPaused)
                 {
                     btnPausePlayback.Text = "▶ ПРОДОЛЖИТЬ ВОСПРОИЗВЕДЕНИЕ (HOME)";
                     btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(76, 175, 80); // Зеленый для продолжения
