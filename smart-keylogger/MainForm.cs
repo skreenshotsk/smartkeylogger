@@ -33,7 +33,6 @@ namespace MacroRecorderGUI
         private const uint VK_BACKQUOTE = 0xC0;
         private const uint VK_PAUSE = 0x13; // Код клавиши Pause/Break
         private const uint VK_HOME = 0x24;  // Код клавиши Home
-        private const uint VK_END = 0x23;   // Код клавиши End
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -66,7 +65,7 @@ namespace MacroRecorderGUI
             RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_NONE, (uint)Keys.F12);
             RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
             RegisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD, MOD_NONE, VK_PAUSE);
-            RegisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK, MOD_NONE, VK_HOME); // ИЗМЕНЕНО: Scroll Lock -> Home
+            RegisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK, MOD_NONE, VK_HOME);
         }
 
         private void UnregisterGlobalHotkeys()
@@ -146,7 +145,7 @@ namespace MacroRecorderGUI
                 TogglePauseRecording();
                 return true;
             }
-            else if (keyData == Keys.Home && isPlaying && !isRecording) // ИЗМЕНЕНО: Scroll -> Home
+            else if (keyData == Keys.Home && isPlaying && !isRecording)
             {
                 TogglePausePlayback();
                 return true;
@@ -159,6 +158,7 @@ namespace MacroRecorderGUI
         {
             if (!isPlaying || player == null) return;
 
+            // Мгновенное переключение без задержек
             if (player.IsPaused)
             {
                 player.ResumePlayback();
@@ -177,6 +177,7 @@ namespace MacroRecorderGUI
         {
             if (!isRecording || recorder == null) return;
 
+            // Мгновенное переключение без задержек
             if (recorder.IsPaused)
             {
                 recorder.ResumeRecording();

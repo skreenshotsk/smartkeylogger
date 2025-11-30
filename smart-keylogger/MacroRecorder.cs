@@ -17,6 +17,7 @@ public class MacroRecorder
     private long totalPauseDuration = 0; // Общее время паузы в тиках
 
     // Список кодов горячих клавиш которые нужно игнорировать
+    // В списке игнорируемых кодов клавиш добавить:
     private HashSet<int> ignoredKeyCodes = new HashSet<int>
     {
         0x78, // F9
@@ -24,7 +25,8 @@ public class MacroRecorder
         0x7A, // F11
         0x7B, // F12
         0xC0, // ` (~)
-        0x13  // Pause/Break - НОВАЯ игнорируемая клавиша
+        0x13, // Pause/Break
+        0x24  // Home - НОВАЯ игнорируемая клавиша для паузы воспроизведения
     };
 
     // НОВОЕ свойство для проверки состояния паузы

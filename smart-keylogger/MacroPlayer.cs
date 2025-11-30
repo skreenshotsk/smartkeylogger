@@ -17,6 +17,7 @@ public class MacroPlayer
     private long _playbackStartTime = 0;
     private long _totalPauseDuration = 0;
     private DateTime _pauseStartTime;
+    private ManualResetEventSlim _pauseWaitHandle = new ManualResetEventSlim(true);
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
@@ -37,6 +38,7 @@ public class MacroPlayer
         _currentEvents = events;
         _currentEventIndex = 0;
         _totalPauseDuration = 0;
+        _pauseWaitHandle.Set();
         
         var keyCheckTask = StartKeyCheck(_internalCancellation.Token);
 
@@ -71,11 +73,8 @@ public class MacroPlayer
                     {
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                        // Ожидание если воспроизведение на паузе
-                        while (_isPaused && !_stopRequested && !linkedCts.Token.IsCancellationRequested)
-                        {
-                            await Task.Delay(50);
-                        }
+                        // Проверяем паузу перед каждым событием
+                        _pauseWaitHandle.Wait(linkedCts.Token);
 
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
@@ -83,21 +82,32 @@ public class MacroPlayer
                         long eventTimeFromStart = e.Timestamp - startTime;
                         long targetTime = _playbackStartTime + eventTimeFromStart + _totalPauseDuration;
 
+                        // Ожидание времени события с проверкой паузы
                         while (DateTime.Now.Ticks < targetTime)
                         {
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
-                            if (_isPaused) break;
+                            
+                            // Быстрая проверка паузы
+                            if (_isPaused)
+                            {
+                                _pauseWaitHandle.Wait(linkedCts.Token);
+                                if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
+                                
+                                // Пересчитываем время после паузы
+                                targetTime = _playbackStartTime + eventTimeFromStart + _totalPauseDuration;
+                                continue;
+                            }
 
                             long remainingTicks = targetTime - DateTime.Now.Ticks;
                             int remainingMs = (int)(remainingTicks / TimeSpan.TicksPerMillisecond);
 
                             if (remainingMs > 10)
                             {
-                                await Task.Delay(Math.Min(5, remainingMs / 2));
+                                await Task.Delay(Math.Min(5, remainingMs / 2), linkedCts.Token);
                             }
                             else if (remainingMs > 2)
                             {
-                                await Task.Delay(1);
+                                await Task.Delay(1, linkedCts.Token);
                             }
                             else
                             {
@@ -105,15 +115,9 @@ public class MacroPlayer
                             }
                             
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
-                            if (_isPaused) break;
                         }
 
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
-                        if (_isPaused)
-                        {
-                            _currentEventIndex--; // Остаемся на текущем событии
-                            continue;
-                        }
 
                         ExecuteEvent(e);
                         
@@ -140,6 +144,7 @@ public class MacroPlayer
                 _internalCancellation.Dispose();
                 _isPaused = false;
                 _currentEventIndex = 0;
+                _pauseWaitHandle.Set();
             }
         }
     }
@@ -150,6 +155,7 @@ public class MacroPlayer
         {
             _isPaused = true;
             _pauseStartTime = DateTime.Now;
+            _pauseWaitHandle.Reset();
             Console.WriteLine("Воспроизведение приостановлено");
         }
     }
@@ -160,6 +166,7 @@ public class MacroPlayer
         {
             _isPaused = false;
             _totalPauseDuration += (DateTime.Now - _pauseStartTime).Ticks;
+            _pauseWaitHandle.Set();
             Console.WriteLine("Воспроизведение возобновлено");
         }
     }
@@ -169,32 +176,34 @@ public class MacroPlayer
         await Task.Run(async () =>
         {
             const int VK_BACKQUOTE = 0xC0;
-            const int VK_HOME = 0x24; // ИЗМЕНЕНО: Scroll Lock -> Home
-            bool backquoteWasPressed = false;
-            bool homeWasPressed = false;
+            const int VK_HOME = 0x24;
+            
+            // Убрал флаги для предыдущего состояния - теперь мгновенная реакция
+            bool backquotePressed = false;
+            bool homePressed = false;
 
             while (!cancellationToken.IsCancellationRequested && !_stopRequested)
             {
                 // Проверка Backquote для остановки
                 short backquoteState = GetAsyncKeyState(VK_BACKQUOTE);
-                bool backquoteIsPressed = (backquoteState & 0x8000) != 0;
+                bool isBackquotePressed = (backquoteState & 0x8000) != 0;
 
-                if (backquoteIsPressed && !backquoteWasPressed)
+                if (isBackquotePressed && !backquotePressed)
                 {
                     Console.WriteLine("Обнаружено нажатие Backquote - остановка воспроизведения");
                     _stopRequested = true;
                     _internalCancellation?.Cancel();
                     break;
                 }
+                backquotePressed = isBackquotePressed;
 
-                backquoteWasPressed = backquoteIsPressed;
-
-                // Проверка Home для паузы/продолжения
+                // Проверка Home для паузы/продолжения - мгновенная реакция
                 short homeState = GetAsyncKeyState(VK_HOME);
-                bool homeIsPressed = (homeState & 0x8000) != 0;
+                bool isHomePressed = (homeState & 0x8000) != 0;
 
-                if (homeIsPressed && !homeWasPressed)
+                if (isHomePressed && !homePressed)
                 {
+                    // Мгновенное переключение без задержек
                     if (_isPaused)
                     {
                         ResumePlayback();
@@ -204,10 +213,9 @@ public class MacroPlayer
                         PausePlayback();
                     }
                 }
+                homePressed = isHomePressed;
 
-                homeWasPressed = homeIsPressed;
-
-                await Task.Delay(10);
+                await Task.Delay(10, cancellationToken);
             }
         }, cancellationToken);
     }
@@ -321,6 +329,7 @@ public class MacroPlayer
     {
         _stopRequested = true;
         _isPaused = false;
+        _pauseWaitHandle.Set();
         _internalCancellation?.Cancel();
     }
 }
