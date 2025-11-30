@@ -33,22 +33,23 @@ public class MacroRecorder
     public bool IsPaused => isPaused;
 
     public TimeSpan RecordingDuration 
-    { 
-        get 
+{ 
+    get 
+    {
+        if (!isRecording) return TimeSpan.Zero;
+        
+        TimeSpan elapsed = DateTime.Now - recordingStartTime;
+        TimeSpan pauseTime = TimeSpan.FromTicks(totalPauseDuration);
+        
+        // Если сейчас на паузе, добавляем текущее время паузы
+        if (isPaused)
         {
-            if (!isRecording) return TimeSpan.Zero;
-            
-            TimeSpan elapsed = DateTime.Now - recordingStartTime;
-            if (isPaused)
-            {
-                return elapsed - TimeSpan.FromTicks(totalPauseDuration);
-            }
-            else
-            {
-                return elapsed - TimeSpan.FromTicks(totalPauseDuration);
-            }
-        } 
-    }
+            pauseTime += (DateTime.Now - pauseStartTime);
+        }
+        
+        return elapsed - pauseTime;
+    } 
+}
 
     // Конвертер кодов прямо внутри класса
     private int SharpHookToVirtualKey(KeyCode sharpHookKeyCode)

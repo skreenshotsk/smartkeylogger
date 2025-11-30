@@ -15,7 +15,7 @@ namespace MacroRecorderGUI
         private CancellationTokenSource? playbackCancellation;
         private bool isPlaying = false;
         private bool isRecording = false;
-        private System.Windows.Forms.Timer recordingTimer;
+        private System.Windows.Forms.Timer? recordingTimer;
         
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -53,7 +53,7 @@ namespace MacroRecorderGUI
         {
             recordingTimer = new System.Windows.Forms.Timer();
             recordingTimer.Interval = 100; // Обновление каждые 100мс
-            recordingTimer.Tick += RecordingTimer_Tick;
+            recordingTimer.Tick += RecordingTimer_Tick!;
         }
 
         private void RecordingTimer_Tick(object sender, EventArgs e)
@@ -219,8 +219,6 @@ namespace MacroRecorderGUI
                 recorder.PauseRecording();
                 Console.WriteLine("Запись приостановлена");
             }
-            
-            UpdateUI();
         }
 
         private async void StartRecording()
@@ -228,7 +226,7 @@ namespace MacroRecorderGUI
             if (isRecording || isPlaying || recorder == null) return;
 
             isRecording = true;
-            recordingTimer.Start();
+            recordingTimer?.Start();
             UpdateUI();
             
             await Task.Delay(500);
@@ -240,7 +238,7 @@ namespace MacroRecorderGUI
             if (!isRecording || recorder == null) return;
 
             isRecording = false;
-            recordingTimer.Stop();
+            recordingTimer?.Stop();
             recorder.StopRecording();
             recorder.SaveToFile();
             UpdateUI();
