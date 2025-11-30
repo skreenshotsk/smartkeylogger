@@ -15,6 +15,7 @@ namespace MacroRecorderGUI
         private CancellationTokenSource? playbackCancellation;
         private bool isPlaying = false;
         private bool isRecording = false;
+        private System.Windows.Forms.Timer recordingTimer;
         
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -45,6 +46,37 @@ namespace MacroRecorderGUI
             InitializeComponent();
             InitializeComponents();
             RegisterGlobalHotkeys();
+            InitializeTimer();
+        }
+
+        private void InitializeTimer()
+        {
+            recordingTimer = new System.Windows.Forms.Timer();
+            recordingTimer.Interval = 100; // Обновление каждые 100мс
+            recordingTimer.Tick += RecordingTimer_Tick;
+        }
+
+        private void RecordingTimer_Tick(object sender, EventArgs e)
+        {
+            UpdateRecordingTime();
+        }
+
+        private void UpdateRecordingTime()
+        {
+            if (isRecording && recorder != null && lblStatus != null)
+            {
+                TimeSpan duration = recorder.RecordingDuration;
+                string timeText = $"{duration:mm\\:ss\\.ff}";
+                
+                if (recorder.IsPaused)
+                {
+                    lblStatus.Text = $"⏸ ЗАПИСЬ ПРИОСТАНОВЛЕНА [{timeText}] (PAUSE ДЛЯ ПРОДОЛЖЕНИЯ)";
+                }
+                else
+                {
+                    lblStatus.Text = $"⚫ ИДЕТ ЗАПИСЬ МАКРОСА [{timeText}] (PAUSE ДЛЯ ПАУЗЫ)";
+                }
+            }
         }
 
         private void InitializeComponents()
@@ -177,7 +209,6 @@ namespace MacroRecorderGUI
         {
             if (!isRecording || recorder == null) return;
 
-            // Мгновенное переключение без задержек
             if (recorder.IsPaused)
             {
                 recorder.ResumeRecording();
@@ -197,6 +228,7 @@ namespace MacroRecorderGUI
             if (isRecording || isPlaying || recorder == null) return;
 
             isRecording = true;
+            recordingTimer.Start();
             UpdateUI();
             
             await Task.Delay(500);
@@ -208,6 +240,7 @@ namespace MacroRecorderGUI
             if (!isRecording || recorder == null) return;
 
             isRecording = false;
+            recordingTimer.Stop();
             recorder.StopRecording();
             recorder.SaveToFile();
             UpdateUI();
@@ -296,25 +329,10 @@ namespace MacroRecorderGUI
             // Обновляем состояния кнопок
             UpdateButtonStates();
 
-            // Обновляем статус
-            if (lblStatus != null)
+            // Обновляем статус (если не в режиме записи)
+            if (!isRecording && lblStatus != null)
             {
-                if (isRecording)
-                {
-                    if (recorder != null && recorder.IsPaused)
-                    {
-                        lblStatus.Text = "⏸ ЗАПИСЬ ПРИОСТАНОВЛЕНА... (PAUSE ДЛЯ ПРОДОЛЖЕНИЯ)";
-                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(255, 152, 0);
-                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 243, 224);
-                    }
-                    else
-                    {
-                        lblStatus.Text = "⚫ ИДЕТ ЗАПИСЬ МАКРОСА... (PAUSE ДЛЯ ПАУЗЫ)";
-                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(244, 67, 54);
-                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 235, 238);
-                    }
-                }
-                else if (isPlaying)
+                if (isPlaying)
                 {
                     if (player != null && player.IsPaused)
                     {
@@ -490,8 +508,10 @@ namespace MacroRecorderGUI
                 player.Stop();
             }
             
+            recordingTimer?.Stop(); // НОВОЕ: останавливаем таймер при закрытии
             UnregisterGlobalHotkeys();
             playbackCancellation?.Dispose();
+            recordingTimer?.Dispose(); // НОВОЕ: освобождаем ресурсы таймера
         }
 
         private void btnSettings_Click(object sender, EventArgs e)

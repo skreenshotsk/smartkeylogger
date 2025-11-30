@@ -32,6 +32,24 @@ public class MacroRecorder
     // НОВОЕ свойство для проверки состояния паузы
     public bool IsPaused => isPaused;
 
+    public TimeSpan RecordingDuration 
+    { 
+        get 
+        {
+            if (!isRecording) return TimeSpan.Zero;
+            
+            TimeSpan elapsed = DateTime.Now - recordingStartTime;
+            if (isPaused)
+            {
+                return elapsed - TimeSpan.FromTicks(totalPauseDuration);
+            }
+            else
+            {
+                return elapsed - TimeSpan.FromTicks(totalPauseDuration);
+            }
+        } 
+    }
+
     // Конвертер кодов прямо внутри класса
     private int SharpHookToVirtualKey(KeyCode sharpHookKeyCode)
     {
