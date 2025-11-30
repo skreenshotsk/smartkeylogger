@@ -20,6 +20,44 @@ public class MacroPlayer
     private DateTime _pauseStartTime;
     private ManualResetEventSlim _pauseWaitHandle = new ManualResetEventSlim(true);
 
+    // НОВЫЕ свойства для таймера воспроизведения
+    public TimeSpan CurrentPlaybackTime 
+    { 
+        get 
+        {
+            if (!_playbackStarted || _currentEvents == null || _currentEvents.Count == 0) 
+                return TimeSpan.Zero;
+            
+            if (_isPaused)
+            {
+                // На паузе - время заморожено
+                return TimeSpan.FromTicks(_pauseStartTime.Ticks - _playbackStartTime - _totalPauseDuration);
+            }
+            else
+            {
+                // Воспроизведение идет
+                return TimeSpan.FromTicks(DateTime.Now.Ticks - _playbackStartTime - _totalPauseDuration);
+            }
+        } 
+    }
+
+    public TimeSpan TotalPlaybackTime 
+    { 
+        get 
+        {
+            if (_currentEvents == null || _currentEvents.Count == 0) 
+                return TimeSpan.Zero;
+            
+            // Сортируем события по времени
+            var sortedEvents = new List<InputEvent>(_currentEvents);
+            sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            
+            long startTime = sortedEvents[0].Timestamp;
+            long endTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
+            return TimeSpan.FromTicks(endTime - startTime);
+        } 
+    }
+
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
 
@@ -124,6 +162,7 @@ public class MacroPlayer
 
                 // Техническая пауза завершена, воспроизведение началось
                 _playbackStarted = true;
+                _playbackStartTime = DateTime.Now.Ticks; // ИСПРАВЛЕНО: используем Ticks вместо ToFileTime()
                 Log("▶ Воспроизведение началось");
 
                 events.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
@@ -133,7 +172,6 @@ public class MacroPlayer
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
                     long startTime = events[0].Timestamp;
-                    _playbackStartTime = DateTime.Now.Ticks;
 
                     for (_currentEventIndex = 0; _currentEventIndex < events.Count; _currentEventIndex++)
                     {

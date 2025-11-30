@@ -16,8 +16,8 @@ namespace MacroRecorderGUI
         private bool isPlaying = false;
         private bool isRecording = false;
         
-        // НОВЫЙ таймер для обновления времени записи
         private System.Windows.Forms.Timer? recordingTimer;
+        private System.Windows.Forms.Timer? playbackTimer;
 
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -48,19 +48,30 @@ namespace MacroRecorderGUI
             InitializeComponent();
             InitializeComponents();
             RegisterGlobalHotkeys();
-            InitializeTimer(); // НОВЫЙ вызов
+            InitializeTimers(); // НОВЫЙ вызов
         }
 
-        private void InitializeTimer()
+        private void InitializeTimers()
         {
+            // Таймер записи
             recordingTimer = new System.Windows.Forms.Timer();
             recordingTimer.Interval = 100; // Обновление каждые 100мс
             recordingTimer.Tick += RecordingTimer_Tick!;
+
+            // Таймер воспроизведения
+            playbackTimer = new System.Windows.Forms.Timer();
+            playbackTimer.Interval = 100;
+            playbackTimer.Tick += PlaybackTimer_Tick!;
         }
 
         private void RecordingTimer_Tick(object sender, EventArgs e)
         {
             UpdateRecordingTime();
+        }
+
+        private void PlaybackTimer_Tick(object sender, EventArgs e)
+        {
+            UpdatePlaybackTime();
         }
 
         private void UpdateRecordingTime()
@@ -77,6 +88,27 @@ namespace MacroRecorderGUI
                 else
                 {
                     lblStatus.Text = $"⚫ ИДЕТ ЗАПИСЬ МАКРОСА [{timeText}] (PAUSE ДЛЯ ПАУЗЫ)";
+                }
+            }
+        }
+
+        private void UpdatePlaybackTime()
+        {
+            if (isPlaying && player != null && lblStatus != null && player.PlaybackStarted)
+            {
+                TimeSpan currentTime = player.CurrentPlaybackTime;
+                TimeSpan totalTime = player.TotalPlaybackTime;
+                
+                string currentText = $"{currentTime:mm\\:ss\\.ff}";
+                string totalText = $"{totalTime:mm\\:ss\\.ff}";
+                
+                if (player.IsPaused)
+                {
+                    lblStatus.Text = $"⏸ ВОСПРОИЗВЕДЕНИЕ ПРИОСТАНОВЛЕНО [{currentText} / {totalText}] (HOME ДЛЯ ПРОДОЛЖЕНИЯ)";
+                }
+                else
+                {
+                    lblStatus.Text = $"▶ ИДЕТ ВОСПРОИЗВЕДЕНИЕ [{currentText} / {totalText}] (HOME ДЛЯ ПАУЗЫ, ` ДЛЯ ОСТАНОВКИ)";
                 }
             }
         }
@@ -302,6 +334,7 @@ namespace MacroRecorderGUI
                 isPlaying = true;
                 playbackCancellation = new CancellationTokenSource();
                 AddLog("▶ Запущено воспроизведение (F11)");
+                playbackTimer?.Start();
                 UpdateUI();
                 
                 // Запускаем задачу для периодического обновления UI во время технической паузы
@@ -348,6 +381,7 @@ namespace MacroRecorderGUI
                 isPlaying = true;
                 playbackCancellation = new CancellationTokenSource();
                 AddLog("🔄 Запущено циклическое воспроизведение (F12)");
+                playbackTimer?.Start();
                 UpdateUI();
                 
                 var keyboardLayout = recorder.GetRecordedKeyboardLayout();
@@ -409,29 +443,11 @@ namespace MacroRecorderGUI
             UpdateButtonStates();
 
             // Обновляем статус (если не в режиме записи)
-            if (!isRecording && lblStatus != null)
+            if (!isRecording && !isPlaying && lblStatus != null)
             {
-                if (isPlaying)
-                {
-                    if (player != null && player.IsPaused)
-                    {
-                        lblStatus.Text = "⏸ ВОСПРОИЗВЕДЕНИЕ ПРИОСТАНОВЛЕНО... (HOME ДЛЯ ПРОДОЛЖЕНИЯ)";
-                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(255, 152, 0);
-                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 243, 224);
-                    }
-                    else
-                    {
-                        lblStatus.Text = "▶ ИДЕТ ВОСПРОИЗВЕДЕНИЕ... (HOME ДЛЯ ПАУЗЫ, ` ДЛЯ ОСТАНОВКИ)";
-                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(76, 175, 80);
-                        lblStatus.BackColor = System.Drawing.Color.FromArgb(232, 245, 233);
-                    }
-                }
-                else
-                {
-                    lblStatus.Text = "● ГОТОВ К РАБОТЕ";
-                    lblStatus.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
-                    lblStatus.BackColor = System.Drawing.Color.FromArgb(227, 242, 253);
-                }
+                lblStatus.Text = "● ГОТОВ К РАБОТЕ";
+                lblStatus.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
+                lblStatus.BackColor = System.Drawing.Color.FromArgb(227, 242, 253);
             }
         }
 
@@ -593,10 +609,12 @@ namespace MacroRecorderGUI
                 player.Stop();
             }
             
-            recordingTimer?.Stop(); // НОВОЕ: останавливаем таймер при закрытии
+            recordingTimer?.Stop();
+            playbackTimer?.Stop();
             UnregisterGlobalHotkeys();
             playbackCancellation?.Dispose();
-            recordingTimer?.Dispose(); // НОВОЕ: освобождаем ресурсы таймера
+            recordingTimer?.Dispose();
+            playbackTimer?.Dispose();
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
