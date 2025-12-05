@@ -211,7 +211,7 @@ namespace MacroRecorderGUI
             this.btnPlayLoop.Name = "btnPlayLoop";
             this.btnPlayLoop.Size = new System.Drawing.Size(200, 50);
             this.btnPlayLoop.TabIndex = 1;
-            this.btnPlayLoop.Text = "🔄 ЦИКЛ (F12)";
+            this.btnPlayLoop.Text = "🔄 ЦИКЛ (Ctrl+F12)";
             this.btnPlayLoop.UseVisualStyleBackColor = false;
             this.btnPlayLoop.Click += new System.EventHandler(this.btnPlayLoop_Click);
             
@@ -260,13 +260,13 @@ namespace MacroRecorderGUI
             
             // lblHotkeys
             this.lblHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 8F);
             this.lblHotkeys.Location = new System.Drawing.Point(0, 30);
             this.lblHotkeys.Name = "lblHotkeys";
             this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 8, 30, 8);
             this.lblHotkeys.Size = new System.Drawing.Size(700, 40);
             this.lblHotkeys.TabIndex = 1;
-            this.lblHotkeys.Text = "F9 - Запись | F10 - Стоп | PAUSE - Пауза записи | F11 - Воспроизвести | F12 - Цикл | HOME - Пауза воспр. | ` - Стоп";
+            this.lblHotkeys.Text = "F9 - Запись | F10 - Стоп | PAUSE - Пауза записи | F11 - Воспроизвести | Ctrl+F12 - Цикл | HOME - Пауза воспр. | ` - Стоп";
             this.lblHotkeys.AutoSize = false;
             this.lblHotkeys.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             

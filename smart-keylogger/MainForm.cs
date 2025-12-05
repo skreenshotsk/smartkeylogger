@@ -143,26 +143,62 @@ namespace MacroRecorderGUI
         }
 
         private void RegisterGlobalHotkeys()
+    {
+        UnregisterGlobalHotkeys();
+        
+        // Добавляем константы для модификаторов
+        const int MOD_CONTROL = 0x0002;
+        const int MOD_ALT = 0x0001;
+        
+        // Регистрируем глобальные горячие клавиши
+        bool result;
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_START_RECORD, MOD_NONE, (uint)Keys.F9);
+        Console.WriteLine($"F9 регистрация: {result}");
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_STOP_RECORD, MOD_NONE, (uint)Keys.F10);
+        Console.WriteLine($"F10 регистрация: {result}");
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
+        Console.WriteLine($"F11 регистрация: {result}");
+        
+        // ИЗМЕНЕНИЕ: Ctrl+F12 для цикла вместо F12
+        result = RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_CONTROL, (uint)Keys.F12);
+        Console.WriteLine($"Ctrl+F12 регистрация: {result}");
+        
+        // Если не сработало Ctrl+F12, пробуем Alt+F12
+        if (!result)
         {
-            // Регистрируем глобальные горячие клавиши
-            RegisterHotKey(this.Handle, HOTKEY_START_RECORD, MOD_NONE, (uint)Keys.F9);
-            RegisterHotKey(this.Handle, HOTKEY_STOP_RECORD, MOD_NONE, (uint)Keys.F10);
-            RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
-            RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_NONE, (uint)Keys.F12);
-            RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
-            RegisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD, MOD_NONE, VK_PAUSE);
-            RegisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK, MOD_NONE, VK_HOME);
+            result = RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_ALT, (uint)Keys.F12);
+            Console.WriteLine($"Alt+F12 регистрация: {result}");
         }
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
+        Console.WriteLine($"Backquote регистрация: {result}");
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD, MOD_NONE, VK_PAUSE);
+        Console.WriteLine($"Pause регистрация: {result}");
+        
+        result = RegisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK, MOD_NONE, VK_HOME);
+        Console.WriteLine($"Home регистрация: {result}");
+    }
 
         private void UnregisterGlobalHotkeys()
         {
-            UnregisterHotKey(this.Handle, HOTKEY_START_RECORD);
-            UnregisterHotKey(this.Handle, HOTKEY_STOP_RECORD);
-            UnregisterHotKey(this.Handle, HOTKEY_PLAY);
-            UnregisterHotKey(this.Handle, HOTKEY_PLAY_LOOP);
-            UnregisterHotKey(this.Handle, HOTKEY_STOP_PLAY);
-            UnregisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD);
-            UnregisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK);
+            try
+            {
+                UnregisterHotKey(this.Handle, HOTKEY_START_RECORD);
+                UnregisterHotKey(this.Handle, HOTKEY_STOP_RECORD);
+                UnregisterHotKey(this.Handle, HOTKEY_PLAY);
+                UnregisterHotKey(this.Handle, HOTKEY_PLAY_LOOP);
+                UnregisterHotKey(this.Handle, HOTKEY_STOP_PLAY);
+                UnregisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD);
+                UnregisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Ошибка при отмене регистрации горячих клавиш: {ex.Message}");
+            }
         }
 
         protected override void WndProc(ref Message m)
@@ -190,7 +226,6 @@ namespace MacroRecorderGUI
                         BeginInvoke(new Action(TogglePauseRecording));
                         break;
                     case HOTKEY_PAUSE_PLAYBACK:
-                        // Используем Invoke для немедленного выполнения, но не блокируем WndProc
                         if (InvokeRequired)
                         {
                             BeginInvoke(new Action(TogglePausePlayback));
@@ -229,6 +264,13 @@ namespace MacroRecorderGUI
                 PlayMacro();
                 return true;
             }
+            // ИЗМЕНЕНИЕ: Ctrl+F12 для цикла
+            else if (keyData == (Keys.F12 | Keys.Control) && !isRecording && !isPlaying)
+            {
+                PlayMacroLoop();
+                return true;
+            }
+            // Оставляем простой F12 для обратной совместимости (если окно активно)
             else if (keyData == Keys.F12 && !isRecording && !isPlaying)
             {
                 PlayMacroLoop();
@@ -380,7 +422,7 @@ namespace MacroRecorderGUI
             {
                 isPlaying = true;
                 playbackCancellation = new CancellationTokenSource();
-                AddLog("🔄 Запущено циклическое воспроизведение (F12)");
+                AddLog("🔄 Запущено циклическое воспроизведение (Ctrl+F12)");
                 playbackTimer?.Start();
                 UpdateUI();
                 
