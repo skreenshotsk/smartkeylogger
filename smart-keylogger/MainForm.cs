@@ -549,33 +549,6 @@ namespace MacroRecorderGUI
             StopPlayback();
         }
 
-        private void UpdateButtonAppearance()
-        {
-            // Функция для установки прозрачности неактивных кнопок
-            void SetButtonState(Button button, bool enabled, System.Drawing.Color enabledColor)
-            {
-                if (enabled)
-                {
-                    button.BackColor = enabledColor;
-                    button.Cursor = Cursors.Hand;
-                }
-                else
-                {
-                    // Полупрозрачная версия цвета
-                    button.BackColor = System.Drawing.Color.FromArgb(150, enabledColor.R, enabledColor.G, enabledColor.B);
-                    button.Cursor = Cursors.Default;
-                }
-            }
-
-            SetButtonState(btnStartRecord, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(76, 175, 80));
-            SetButtonState(btnStopRecord, isRecording && !isPlaying, System.Drawing.Color.FromArgb(244, 67, 54));
-            SetButtonState(btnPauseRecord, isRecording && !isPlaying, System.Drawing.Color.FromArgb(255, 152, 0));
-            SetButtonState(btnPlay, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(33, 150, 243));
-            SetButtonState(btnPlayLoop, !isRecording && !isPlaying, System.Drawing.Color.FromArgb(156, 39, 176));
-            SetButtonState(btnStopPlayback, isPlaying && !isRecording, System.Drawing.Color.FromArgb(255, 152, 0));
-            SetButtonState(btnPausePlayback, isPlaying && !isRecording, System.Drawing.Color.FromArgb(255, 152, 0));
-        }
-
         private void btnStartRecord_Click(object sender, EventArgs e)
         {
             StartRecording();

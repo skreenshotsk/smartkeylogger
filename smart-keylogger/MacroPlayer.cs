@@ -20,7 +20,7 @@ public class MacroPlayer
     private DateTime _pauseStartTime;
     private ManualResetEventSlim _pauseWaitHandle = new ManualResetEventSlim(true);
 
-    // НОВЫЕ свойства для таймера воспроизведения
+    // свойства для таймера воспроизведения
     public TimeSpan CurrentPlaybackTime 
     { 
         get 
@@ -28,15 +28,36 @@ public class MacroPlayer
             if (!_playbackStarted || _currentEvents == null || _currentEvents.Count == 0) 
                 return TimeSpan.Zero;
             
+            // Сортируем события для расчета
+            var sortedEvents = new List<InputEvent>(_currentEvents);
+            sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            
+            long startEventTime = sortedEvents[0].Timestamp;
+            long endEventTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
+            long totalEventDuration = endEventTime - startEventTime;
+            
+            if (totalEventDuration <= 0)
+                return TimeSpan.Zero;
+            
             if (_isPaused)
             {
-                // На паузе - время заморожено
-                return TimeSpan.FromTicks(_pauseStartTime.Ticks - _playbackStartTime - _totalPauseDuration);
+                // На паузе - возвращаем время на момент начала паузы
+                long elapsedUntilPause = _pauseStartTime.Ticks - _playbackStartTime - _totalPauseDuration;
+                
+                // Для циклического воспроизведения: используем модуль от общей длительности
+                long currentCycleTime = elapsedUntilPause % totalEventDuration;
+                
+                return TimeSpan.FromTicks(currentCycleTime);
             }
             else
             {
                 // Воспроизведение идет
-                return TimeSpan.FromTicks(DateTime.Now.Ticks - _playbackStartTime - _totalPauseDuration);
+                long currentElapsed = DateTime.Now.Ticks - _playbackStartTime - _totalPauseDuration;
+                
+                // Для циклического воспроизведения используем модуль
+                long currentCycleTime = currentElapsed % totalEventDuration;
+                
+                return TimeSpan.FromTicks(currentCycleTime);
             }
         } 
     }
@@ -48,7 +69,6 @@ public class MacroPlayer
             if (_currentEvents == null || _currentEvents.Count == 0) 
                 return TimeSpan.Zero;
             
-            // Сортируем события по времени
             var sortedEvents = new List<InputEvent>(_currentEvents);
             sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
             
@@ -114,13 +134,14 @@ public class MacroPlayer
         _totalPauseDuration = 0;
         _pauseWaitHandle.Set();
         
-        // СОРТИРУЕМ события ЕЩЕ РАЗ перед началом
+        // СОРТИРУЕМ события перед началом
         var eventsCopy = new List<InputEvent>(events);
         eventsCopy.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
         
-        // Сохраняем оригинальную длительность макроса
-        long originalStartTime = eventsCopy[0].Timestamp;
-        long originalDuration = eventsCopy[eventsCopy.Count - 1].Timestamp - originalStartTime;
+        // Сохраняем общую длительность макроса
+        long startEventTime = eventsCopy[0].Timestamp;
+        long endEventTime = eventsCopy[eventsCopy.Count - 1].Timestamp;
+        long totalMacroDuration = endEventTime - startEventTime;
         
         // Переключаем язык клавиатуры если нужно
         if (keyboardLayout.HasValue && keyboardLayout.Value != IntPtr.Zero)
@@ -169,23 +190,21 @@ public class MacroPlayer
                     await Task.Delay(100);
                 }
 
+                // Таймер воспроизведения начинается здесь
+                _playbackStartTime = DateTime.Now.Ticks;
+                _playbackStarted = true;
+                long cycleStartTime = _playbackStartTime;
+                
                 do
                 {
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                    // ВОТ ИСПРАВЛЕНИЕ: сбрасываем время начала для КАЖДОГО цикла
-                    _playbackStartTime = DateTime.Now.Ticks;
-                    _playbackStarted = true;
-                    _totalPauseDuration = 0; // Сбрасываем паузу для нового цикла
-                    
-                    // Используем отсортированную копию
-                    var currentEvents = new List<InputEvent>(eventsCopy);
-                    
-                    Log($"▶ Цикл воспроизведения начался ({currentEvents.Count} событий)");
+                    Log($"▶ Цикл воспроизведения начался ({eventsCopy.Count} событий)");
 
-                    long startTime = currentEvents[0].Timestamp;
-
-                    for (_currentEventIndex = 0; _currentEventIndex < currentEvents.Count; _currentEventIndex++)
+                    // Время начала текущего цикла (с учетом пауз)
+                    long currentCycleStartAdjusted = cycleStartTime;
+                    
+                    for (_currentEventIndex = 0; _currentEventIndex < eventsCopy.Count; _currentEventIndex++)
                     {
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
@@ -197,11 +216,13 @@ public class MacroPlayer
 
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                        var e = currentEvents[_currentEventIndex];
-                        long eventTimeFromStart = e.Timestamp - startTime;
-                        long targetTime = _playbackStartTime + eventTimeFromStart + _totalPauseDuration;
+                        var e = eventsCopy[_currentEventIndex];
+                        long eventTimeFromStart = e.Timestamp - startEventTime;
+                        
+                        // Рассчитываем целевое время с учетом пауз
+                        long targetTime = currentCycleStartAdjusted + eventTimeFromStart;
 
-                        // Ожидание времени события с проверкой паузы
+                        // Ожидание времени события
                         while (DateTime.Now.Ticks < targetTime)
                         {
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
@@ -215,8 +236,10 @@ public class MacroPlayer
                                 }
                                 if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                                 
-                                // Пересчитываем время после паузы
-                                targetTime = _playbackStartTime + eventTimeFromStart + _totalPauseDuration;
+                                // После паузы пересчитываем время с учетом новой паузы
+                                long currentTime = DateTime.Now.Ticks;
+                                targetTime = currentCycleStartAdjusted + eventTimeFromStart + 
+                                            (currentTime - _playbackStartTime - _totalPauseDuration - eventTimeFromStart);
                                 continue;
                             }
 
@@ -233,8 +256,7 @@ public class MacroPlayer
                             }
                             else
                             {
-                                // Короткое ожидание для точности
-                                await Task.Delay(0, linkedCts.Token);
+                                break;
                             }
                             
                             if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
@@ -254,8 +276,11 @@ public class MacroPlayer
                         // Если не цикличное воспроизведение - выходим
                         if (!loop) break;
                         
-                        // Короткая пауза между циклами (100мс)
-                        await Task.Delay(100, linkedCts.Token);
+                        // Обновляем время начала следующего цикла
+                        cycleStartTime = DateTime.Now.Ticks + _totalPauseDuration;
+                        
+                        // Короткая пауза между циклами (50мс)
+                        await Task.Delay(50, linkedCts.Token);
                     }
 
                 } while (loop && !_stopRequested && !linkedCts.Token.IsCancellationRequested);
@@ -282,7 +307,7 @@ public class MacroPlayer
 
     public void PausePlayback()
     {
-        if (!_isPaused)
+        if (!_isPaused && _playbackStarted)
         {
             _isPaused = true;
             _pauseStartTime = DateTime.Now;
@@ -295,7 +320,7 @@ public class MacroPlayer
 
     public void ResumePlayback()
     {
-        if (_isPaused)
+        if (_isPaused && _playbackStarted)
         {
             var pauseDuration = (DateTime.Now - _pauseStartTime).Ticks;
             _isPaused = false;
@@ -444,8 +469,6 @@ public class MacroPlayer
         _stopRequested = true;
         _isPaused = false;
         _playbackStarted = false;
-        _currentEventIndex = 0;
-        _totalPauseDuration = 0;
         _pauseWaitHandle.Set();
         ReleaseAllKeys();
         _internalCancellation?.Cancel();
