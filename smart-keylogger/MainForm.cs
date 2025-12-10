@@ -1,6 +1,7 @@
 // MainForm.cs
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -18,6 +19,11 @@ namespace MacroRecorderGUI
         
         private System.Windows.Forms.Timer? recordingTimer;
         private System.Windows.Forms.Timer? playbackTimer;
+        
+        // Управление файлами записей
+        private List<string> savedMacroFiles = new List<string>(); // Список файлов в директории приложения
+        private string currentMacroFile = ""; // Текущий выбранный файл для воспроизведения
+        private string macrosDirectory = ""; // Директория для сохранения макросов
 
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -119,11 +125,65 @@ namespace MacroRecorderGUI
             player = new MacroPlayer();
             playbackCancellation = new CancellationTokenSource();
             
+            // Инициализируем директорию для макросов
+            macrosDirectory = Path.Combine(Application.StartupPath, "Macros");
+            if (!Directory.Exists(macrosDirectory))
+            {
+                Directory.CreateDirectory(macrosDirectory);
+                AddLog($"📁 Создана директория для макросов: {macrosDirectory}");
+            }
+            
+            // Загружаем список существующих файлов
+            LoadMacroFilesList();
+            
             // Передаем ссылку на форму для логирования
             recorder.SetLogCallback(AddLog);
             player.SetLogCallback(AddLog);
 
+            // Инициализируем ComboBox
+            UpdateMacroFilesComboBox();
+
             UpdateUI();
+        }
+        
+        private void LoadMacroFilesList()
+        {
+            try
+            {
+                savedMacroFiles.Clear();
+                if (Directory.Exists(macrosDirectory))
+                {
+                    var files = Directory.GetFiles(macrosDirectory, "*.json");
+                    foreach (var file in files)
+                    {
+                        savedMacroFiles.Add(Path.GetFileName(file));
+                    }
+                    savedMacroFiles.Sort();
+                    if (savedMacroFiles.Count > 0)
+                    {
+                        AddLog($"📋 Загружено файлов макросов: {savedMacroFiles.Count}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при загрузке списка файлов: {ex.Message}");
+            }
+        }
+        
+        private string GenerateMacroFileName()
+        {
+            int counter = 1;
+            string baseName = "macro";
+            string fileName;
+            
+            do
+            {
+                fileName = $"{baseName}_{counter}.json";
+                counter++;
+            } while (savedMacroFiles.Contains(fileName) || File.Exists(Path.Combine(macrosDirectory, fileName)));
+            
+            return fileName;
         }
         
         private void AddLog(string message)
@@ -359,18 +419,295 @@ namespace MacroRecorderGUI
             if (!isRecording || recorder == null) return;
 
             isRecording = false;
-            recordingTimer?.Stop(); // НОВОЕ: останавливаем таймер
+            recordingTimer?.Stop();
             recorder.StopRecording();
-            recorder.SaveToFile();
-            AddLog("⏹ Запись остановлена (F10)");
+            
+            // Показываем диалог сохранения
+            SaveRecordingDialog();
+            
             UpdateUI();
+        }
+        
+        private void SaveRecordingDialog()
+        {
+            if (recorder == null) return;
+            
+            // Создаем диалог выбора места сохранения
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "JSON файлы (*.json)|*.json|Все файлы (*.*)|*.*";
+                dialog.Title = "Сохранить запись макроса";
+                dialog.FileName = GenerateMacroFileName();
+                
+                // Предлагаем два варианта через кнопки
+                var result = MessageBox.Show(
+                    "Выберите место сохранения:\n\n" +
+                    "ДА - Сохранить в директорию приложения\n" +
+                    "НЕТ - Выбрать место на диске/флешке\n" +
+                    "ОТМЕНА - Не сохранять",
+                    "Сохранение записи",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question);
+                
+                string savedPath = "";
+                
+                if (result == DialogResult.Yes)
+                {
+                    // Запрашиваем имя файла у пользователя через простой диалог
+                    string defaultName = Path.GetFileNameWithoutExtension(GenerateMacroFileName());
+                    string? userFileName = ShowInputDialog("Введите имя файла (без расширения):", "Имя файла", defaultName);
+                    
+                    if (string.IsNullOrWhiteSpace(userFileName))
+                    {
+                        // Если пользователь не ввел имя, используем автоматическое
+                        userFileName = defaultName;
+                    }
+                    else
+                    {
+                        // Очищаем имя от недопустимых символов
+                        char[] invalidChars = Path.GetInvalidFileNameChars();
+                        foreach (char c in invalidChars)
+                        {
+                            userFileName = userFileName.Replace(c.ToString(), "");
+                        }
+                        userFileName = userFileName.Trim();
+                        if (string.IsNullOrWhiteSpace(userFileName))
+                        {
+                            userFileName = defaultName;
+                        }
+                    }
+                    
+                    // Проверяем, не существует ли уже файл с таким именем
+                    string fileName = $"{userFileName}.json";
+                    int counter = 1;
+                    while (savedMacroFiles.Contains(fileName) || File.Exists(Path.Combine(macrosDirectory, fileName)))
+                    {
+                        fileName = $"{userFileName}_{counter}.json";
+                        counter++;
+                    }
+                    
+                    savedPath = Path.Combine(macrosDirectory, fileName);
+                    
+                    try
+                    {
+                        recorder.SaveToFile(savedPath);
+                        savedMacroFiles.Add(fileName);
+                        savedMacroFiles.Sort();
+                        currentMacroFile = fileName;
+                        AddLog($"💾 Запись сохранена в директорию приложения: {fileName}");
+                        AddLog($"📁 Полный путь: {savedPath}");
+                        
+                        // Обновляем ComboBox если он существует
+                        UpdateMacroFilesComboBox();
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog($"❌ Ошибка при сохранении в директорию приложения: {ex.Message}");
+                        MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else if (result == DialogResult.No)
+                {
+                    // Пользователь выбирает место на диске
+                    dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    dialog.FileName = Path.GetFileNameWithoutExtension(GenerateMacroFileName());
+                    
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        savedPath = dialog.FileName;
+                        
+                        try
+                        {
+                            recorder.SaveToFile(savedPath);
+                            string fileName = Path.GetFileName(savedPath);
+                            AddLog($"💾 Запись сохранена на диск: {fileName}");
+                            AddLog($"📁 Полный путь: {savedPath}");
+                            
+                            // Если файл сохранен в директории приложения, добавляем в список
+                            if (savedPath.StartsWith(macrosDirectory, StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (!savedMacroFiles.Contains(fileName))
+                                {
+                                    savedMacroFiles.Add(fileName);
+                                    savedMacroFiles.Sort();
+                                    UpdateMacroFilesComboBox();
+                                }
+                                currentMacroFile = fileName;
+                            }
+                            else
+                            {
+                                currentMacroFile = savedPath; // Сохраняем полный путь для внешних файлов
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AddLog($"❌ Ошибка при сохранении на диск: {ex.Message}");
+                            MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        AddLog("⚠️ Сохранение отменено пользователем");
+                    }
+                }
+                else
+                {
+                    AddLog("⚠️ Сохранение отменено пользователем");
+                }
+            }
+        }
+        
+        private void UpdateMacroFilesComboBox()
+        {
+            if (cmbMacroFiles != null)
+            {
+                cmbMacroFiles.Items.Clear();
+                cmbMacroFiles.Items.AddRange(savedMacroFiles.ToArray());
+                
+                if (!string.IsNullOrEmpty(currentMacroFile))
+                {
+                    if (savedMacroFiles.Contains(currentMacroFile))
+                    {
+                        cmbMacroFiles.SelectedItem = currentMacroFile;
+                    }
+                    else if (File.Exists(currentMacroFile))
+                    {
+                        // Внешний файл - добавляем в список с пометкой
+                        cmbMacroFiles.Items.Add($"[Внешний] {Path.GetFileName(currentMacroFile)}");
+                        cmbMacroFiles.SelectedIndex = cmbMacroFiles.Items.Count - 1;
+                    }
+                }
+            }
+        }
+        
+        private string GetSelectedMacroFile()
+        {
+            if (cmbMacroFiles != null && cmbMacroFiles.SelectedItem != null)
+            {
+                string? selected = cmbMacroFiles.SelectedItem.ToString();
+                if (selected == null) return "";
+                
+                // Если это файл из директории приложения
+                if (savedMacroFiles.Contains(selected))
+                {
+                    return Path.Combine(macrosDirectory, selected);
+                }
+                
+                // Если это внешний файл
+                if (selected.StartsWith("[Внешний] "))
+                {
+                    return currentMacroFile; // Возвращаем сохраненный полный путь
+                }
+            }
+            
+            // Если ничего не выбрано, возвращаем текущий файл
+            if (!string.IsNullOrEmpty(currentMacroFile))
+            {
+                if (File.Exists(currentMacroFile))
+                {
+                    return currentMacroFile;
+                }
+            }
+            
+            return "";
+        }
+        
+        private void LoadMacroFromFile()
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "JSON файлы (*.json)|*.json|Все файлы (*.*)|*.*";
+                dialog.Title = "Загрузить файл макроса";
+                dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = dialog.FileName;
+                    
+                    try
+                    {
+                        // Проверяем валидность файла
+                        if (!File.Exists(filePath))
+                        {
+                            AddLog($"❌ Файл не существует: {filePath}");
+                            MessageBox.Show("Выбранный файл не существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        
+                        // Пытаемся загрузить файл для проверки используя основной recorder
+                        if (recorder == null)
+                        {
+                            AddLog($"❌ Recorder не инициализирован");
+                            MessageBox.Show("Ошибка: Recorder не инициализирован.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        
+                        var events = recorder.LoadFromFile(filePath);
+                        
+                        if (events == null || events.Count == 0)
+                        {
+                            AddLog($"❌ Файл не содержит записей или поврежден: {Path.GetFileName(filePath)}");
+                            MessageBox.Show("Выбранный файл не содержит записей макроса или поврежден.", 
+                                "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        
+                        // Файл валиден
+                        string fileName = Path.GetFileName(filePath);
+                        
+                        // Если файл в директории приложения, добавляем в список
+                        if (filePath.StartsWith(macrosDirectory, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!savedMacroFiles.Contains(fileName))
+                            {
+                                savedMacroFiles.Add(fileName);
+                                savedMacroFiles.Sort();
+                            }
+                            currentMacroFile = fileName;
+                        }
+                        else
+                        {
+                            // Внешний файл
+                            currentMacroFile = filePath;
+                        }
+                        
+                        AddLog($"✅ Файл успешно загружен: {fileName}");
+                        AddLog($"📁 Полный путь: {filePath}");
+                        if (events != null)
+                        {
+                            AddLog($"📊 Событий в файле: {events.Count}");
+                        }
+                        AddLog($"▶ Файл установлен для воспроизведения");
+                        
+                        // Обновляем ComboBox
+                        UpdateMacroFilesComboBox();
+                    }
+                    catch (Exception ex)
+                    {
+                        AddLog($"❌ Ошибка при загрузке файла: {ex.Message}");
+                        MessageBox.Show($"Ошибка при загрузке файла: {ex.Message}", 
+                            "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         private async void PlayMacro()
         {
             if (isPlaying || isRecording || recorder == null || player == null) return;
 
-            var events = recorder.LoadFromFile();
+            // Определяем какой файл загружать
+            string fileToLoad = GetSelectedMacroFile();
+            if (string.IsNullOrEmpty(fileToLoad))
+            {
+                AddLog("⚠️ Файл для воспроизведения не выбран");
+                MessageBox.Show("Пожалуйста, выберите файл для воспроизведения или загрузите файл из проводника.", 
+                    "Файл не выбран", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            AddLog($"📂 Загрузка файла для воспроизведения: {Path.GetFileName(fileToLoad)}");
+            var events = recorder.LoadFromFile(fileToLoad);
             if (events != null && events.Count > 0)
             {
                 isPlaying = true;
@@ -418,7 +755,18 @@ namespace MacroRecorderGUI
         {
             if (isPlaying || isRecording || recorder == null || player == null) return;
 
-            var events = recorder.LoadFromFile();
+            // Определяем какой файл загружать
+            string fileToLoad = GetSelectedMacroFile();
+            if (string.IsNullOrEmpty(fileToLoad))
+            {
+                AddLog("⚠️ Файл для воспроизведения не выбран");
+                MessageBox.Show("Пожалуйста, выберите файл для воспроизведения или загрузите файл из проводника.", 
+                    "Файл не выбран", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            AddLog($"📂 Загрузка файла для циклического воспроизведения: {Path.GetFileName(fileToLoad)}");
+            var events = recorder.LoadFromFile(fileToLoad);
             if (events != null && events.Count > 0)
             {
                 isPlaying = true;
@@ -644,6 +992,62 @@ namespace MacroRecorderGUI
                            "Информация", 
                            MessageBoxButtons.OK, 
                            MessageBoxIcon.Information);
+        }
+        
+        private void btnLoadMacroFile_Click(object sender, EventArgs e)
+        {
+            LoadMacroFromFile();
+        }
+        
+        private void cmbMacroFiles_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbMacroFiles != null && cmbMacroFiles.SelectedItem != null)
+            {
+                string? selected = cmbMacroFiles.SelectedItem.ToString();
+                if (selected == null) return;
+                
+                if (savedMacroFiles.Contains(selected))
+                {
+                    currentMacroFile = selected;
+                    AddLog($"📋 Выбран файл для воспроизведения: {selected}");
+                }
+                else if (selected.StartsWith("[Внешний] "))
+                {
+                    // Внешний файл уже сохранен в currentMacroFile
+                    AddLog($"📋 Выбран внешний файл для воспроизведения: {Path.GetFileName(currentMacroFile)}");
+                }
+            }
+        }
+        
+        private string? ShowInputDialog(string text, string caption, string defaultValue = "")
+        {
+            Form prompt = new Form()
+            {
+                Width = 400,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = caption,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label textLabel = new Label() { Left = 20, Top = 20, Width = 350, Text = text };
+            TextBox textBox = new TextBox() { Left = 20, Top = 50, Width = 350, Text = defaultValue };
+            Button confirmation = new Button() { Text = "OK", Left = 230, Width = 70, Top = 80, DialogResult = DialogResult.OK };
+            Button cancel = new Button() { Text = "Отмена", Left = 310, Width = 70, Top = 80, DialogResult = DialogResult.Cancel };
+            
+            confirmation.Click += (sender, e) => { prompt.Close(); };
+            cancel.Click += (sender, e) => { prompt.Close(); };
+            
+            prompt.Controls.Add(textLabel);
+            prompt.Controls.Add(textBox);
+            prompt.Controls.Add(confirmation);
+            prompt.Controls.Add(cancel);
+            prompt.AcceptButton = confirmation;
+            prompt.CancelButton = cancel;
+            
+            return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : null;
         }
     }
 }
