@@ -25,22 +25,34 @@ public class MacroRecorder
     { 
         get 
         {
-            if (!isRecording) return TimeSpan.Zero;
-            
-            TimeSpan elapsed = DateTime.Now - recordingStartTime;
-            TimeSpan pauseTime = TimeSpan.FromTicks(totalPauseDuration);
-            
-            // Если сейчас на паузе, добавляем текущее время паузы
-            if (isPaused)
+            lock (_lock)
             {
-                pauseTime += (DateTime.Now - pauseStartTime);
+                if (!isRecording) return TimeSpan.Zero;
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                TimeSpan pauseTime = TimeSpan.FromTicks(totalPauseDuration);
+                
+                // Если сейчас на паузе, добавляем текущее время паузы
+                if (isPaused)
+                {
+                    pauseTime += (DateTime.Now - pauseStartTime);
+                }
+                
+                return elapsed - pauseTime;
             }
-            
-            return elapsed - pauseTime;
         } 
     }
 
-    public bool IsRecording => isRecording;
+    public bool IsRecording 
+    { 
+        get 
+        { 
+            lock (_lock) 
+            { 
+                return isRecording; 
+            } 
+        } 
+    }
 
     // Список кодов горячих клавиш которые нужно игнорировать
     // В списке игнорируемых кодов клавиш добавить:
@@ -56,7 +68,16 @@ public class MacroRecorder
     };
 
     // НОВОЕ свойство для проверки состояния паузы
-    public bool IsPaused => isPaused;
+    public bool IsPaused 
+    { 
+        get 
+        { 
+            lock (_lock) 
+            { 
+                return isPaused; 
+            } 
+        } 
+    }
     
     // Callback для логирования
     private Action<string>? logCallback;
@@ -139,155 +160,305 @@ public class MacroRecorder
 
     public void StartRecording(bool trackLang = false)
     {
-        recordedEvents.Clear();
-        isRecording = true;
-        isPaused = false;
-        totalPauseDuration = 0;
-        recordingStartTime = DateTime.Now;
-        trackLanguage = trackLang;
-        recordedKeyboardLayout = null;
-        savedDurationTicks = null;
-        loadedDurationTicks = null;
-        
-        if (trackLanguage)
+        lock (_lock)
         {
-            IntPtr hwnd = WinAPI.GetForegroundWindow();
-            uint threadId = WinAPI.GetWindowThreadProcessId(hwnd, out _);
-            IntPtr layout = WinAPI.GetKeyboardLayout(threadId);
-            recordedKeyboardLayout = layout.ToInt64();
-            string langName = GetLanguageName(layout);
-            Log($"🌐 Язык клавиатуры сохранен: {langName} (0x{layout.ToInt64():X8})");
+            // Проверяем, что запись еще не идет
+            if (isRecording)
+            {
+                Console.WriteLine("Запись уже идет!");
+                return;
+            }
+            
+            // Убеждаемся, что предыдущий hook полностью очищен
+            if (hook != null)
+            {
+                try
+                {
+                    hook.MousePressed -= OnMousePressed;
+                    hook.MouseReleased -= OnMouseReleased;
+                    hook.MouseMoved -= OnMouseMoved;
+                    hook.KeyPressed -= OnKeyPressed;
+                    hook.KeyReleased -= OnKeyReleased;
+                    hook.Dispose();
+                }
+                catch
+                {
+                    // Игнорируем ошибки при очистке старого hook
+                }
+                hook = null;
+            }
+            
+            recordedEvents.Clear();
+            isRecording = true;
+            isPaused = false;
+            totalPauseDuration = 0;
+            recordingStartTime = DateTime.Now;
+            trackLanguage = trackLang;
+            recordedKeyboardLayout = null;
+            savedDurationTicks = null;
+            loadedDurationTicks = null;
+            
+            if (trackLanguage)
+            {
+                IntPtr hwnd = WinAPI.GetForegroundWindow();
+                uint threadId = WinAPI.GetWindowThreadProcessId(hwnd, out _);
+                IntPtr layout = WinAPI.GetKeyboardLayout(threadId);
+                recordedKeyboardLayout = layout.ToInt64();
+                string langName = GetLanguageName(layout);
+                Log($"🌐 Язык клавиатуры сохранен: {langName} (0x{layout.ToInt64():X8})");
+            }
+            
+            try
+            {
+                hook = new TaskPoolGlobalHook();
+                
+                hook.MousePressed += OnMousePressed;
+                hook.MouseReleased += OnMouseReleased;
+                hook.MouseMoved += OnMouseMoved;
+                hook.KeyPressed += OnKeyPressed;
+                hook.KeyReleased += OnKeyReleased;
+                
+                Log("▶ Начата запись макроса");
+                Console.WriteLine("Запись начата! Нажмите Enter в этом окне чтобы остановить и сохранить...");
+                hook.RunAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при создании hook: {ex.Message}");
+                // Откатываем состояние при ошибке
+                isRecording = false;
+                hook = null;
+                throw;
+            }
         }
-        
-        hook = new TaskPoolGlobalHook();
-        
-        hook.MousePressed += OnMousePressed;
-        hook.MouseReleased += OnMouseReleased;
-        hook.MouseMoved += OnMouseMoved;
-        hook.KeyPressed += OnKeyPressed;
-        hook.KeyReleased += OnKeyReleased;
-        
-        Log("▶ Начата запись макроса");
-        Console.WriteLine("Запись начата! Нажмите Enter в этом окне чтобы остановить и сохранить...");
-        hook.RunAsync();
     }
 
     public void PauseRecording()
     {
-        if (!isRecording || isPaused) return;
-        
-        isPaused = true;
-        pauseStartTime = DateTime.Now;
-        
-        // получаем текущую длительность записи
-        TimeSpan currentDuration = RecordingDuration;
-        string timeText = $"{currentDuration:mm\\:ss\\.ff}";
-        
-        Log($"⏸ Запись приостановлена на {timeText}");
-        Console.WriteLine($"Запись приостановлена на {timeText}");
+        lock (_lock)
+        {
+            if (!isRecording || isPaused) return;
+            
+            isPaused = true;
+            pauseStartTime = DateTime.Now;
+            
+            // получаем текущую длительность записи
+            TimeSpan currentDuration = RecordingDuration;
+            string timeText = $"{currentDuration:mm\\:ss\\.ff}";
+            
+            Log($"⏸ Запись приостановлена на {timeText}");
+            Console.WriteLine($"Запись приостановлена на {timeText}");
+        }
     }
 
     public void ResumeRecording()
     {
-        if (!isRecording || !isPaused) return;
-        
-        isPaused = false;
-        totalPauseDuration += (DateTime.Now - pauseStartTime).Ticks;
-        Log($"▶ Запись возобновлена");
-        Console.WriteLine("Запись возобновлена");
+        lock (_lock)
+        {
+            if (!isRecording || !isPaused) return;
+            
+            isPaused = false;
+            totalPauseDuration += (DateTime.Now - pauseStartTime).Ticks;
+            Log($"▶ Запись возобновлена");
+            Console.WriteLine("Запись возобновлена");
+        }
     }
 
     private long? savedDurationTicks = null; // Сохраняем длительность для использования при сохранении
 
     public void StopRecording()
     {
-        // получаем длительность записи
-        TimeSpan recordingDuration = RecordingDuration;
-        string durationText = $"{recordingDuration:mm\\:ss\\.ff}";
+        TaskPoolGlobalHook? hookToDispose = null;
+        string durationText = "00:00.00";
         
-        // Сохраняем длительность в тиках для использования при сохранении
-        savedDurationTicks = recordingDuration.Ticks;
+        try
+        {
+            lock (_lock)
+            {
+                // Проверяем, что запись действительно идет
+                if (!isRecording) return;
+                
+                // Сохраняем ссылку на hook до изменения флагов
+                hookToDispose = hook;
+                
+                // получаем длительность записи
+                try
+                {
+                    TimeSpan recordingDuration = RecordingDuration;
+                    durationText = $"{recordingDuration:mm\\:ss\\.ff}";
+                    savedDurationTicks = recordingDuration.Ticks;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при получении длительности записи: {ex.Message}");
+                    savedDurationTicks = 0;
+                }
 
-        isRecording = false;
-        isPaused = false;
-        hook?.Dispose();
-        hook = null;
-        
-        Log($"⏹ Запись остановлена. Длительность записи: {durationText}");
-        Console.WriteLine($"Запись остановлена. Длительность: {durationText}");
+                // Сначала отписываемся от событий, чтобы избежать race condition
+                if (hookToDispose != null)
+                {
+                    try
+                    {
+                        hookToDispose.MousePressed -= OnMousePressed;
+                        hookToDispose.MouseReleased -= OnMouseReleased;
+                        hookToDispose.MouseMoved -= OnMouseMoved;
+                        hookToDispose.KeyPressed -= OnKeyPressed;
+                        hookToDispose.KeyReleased -= OnKeyReleased;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Ошибка при отписке от событий: {ex.Message}");
+                    }
+                }
+                
+                // Устанавливаем флаги после отписки от событий
+                isRecording = false;
+                isPaused = false;
+                hook = null; // Обнуляем ссылку сразу после установки флагов
+            }
+            
+            // Dispose hook вне lock, чтобы избежать проблем
+            if (hookToDispose != null)
+            {
+                try
+                {
+                    hookToDispose.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при dispose hook: {ex.Message}");
+                }
+            }
+            
+            Log($"⏹ Запись остановлена. Длительность записи: {durationText}");
+            Console.WriteLine($"Запись остановлена. Длительность: {durationText}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Критическая ошибка при остановке записи: {ex.Message}");
+            Console.WriteLine($"StackTrace: {ex.StackTrace}");
+            
+            // В случае критической ошибки все равно пытаемся очистить состояние
+            lock (_lock)
+            {
+                isRecording = false;
+                isPaused = false;
+                hook = null;
+            }
+            
+            if (hookToDispose != null)
+            {
+                try
+                {
+                    hookToDispose.Dispose();
+                }
+                catch { }
+            }
+        }
     }
 
     private void OnMouseMoved(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording || isPaused) return;
-        
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
-        
-        recordedEvents.Add(new InputEvent
+        try
         {
-            EventType = "MouseMove",
-            X = e.Data.X,
-            Y = e.Data.Y,
-            Timestamp = adjustedTicks
-        });
-        // Движения мыши не логируем
+            lock (_lock)
+            {
+                if (!isRecording || isPaused || hook == null) return;
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                long adjustedTicks = elapsed.Ticks - totalPauseDuration;
+                
+                recordedEvents.Add(new InputEvent
+                {
+                    EventType = "MouseMove",
+                    X = e.Data.X,
+                    Y = e.Data.Y,
+                    Timestamp = adjustedTicks
+                });
+                // Движения мыши не логируем
+            }
+        }
+        catch (Exception ex)
+        {
+            // Игнорируем ошибки в обработчиках событий, чтобы не крашить приложение
+            Console.WriteLine($"Ошибка в OnMouseMoved: {ex.Message}");
+        }
     }
 
     private void OnMousePressed(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording || isPaused) return;
-        
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
-        
-        string buttonName = e.Data.Button switch
+        try
         {
-            MouseButton.Button1 => "ЛКМ",
-            MouseButton.Button2 => "ПКМ",
-            MouseButton.Button3 => "СКМ",
-            _ => "Кнопка"
-        };
-        
-        recordedEvents.Add(new InputEvent
+            lock (_lock)
+            {
+                if (!isRecording || isPaused || hook == null) return;
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                long adjustedTicks = elapsed.Ticks - totalPauseDuration;
+                
+                string buttonName = e.Data.Button switch
+                {
+                    MouseButton.Button1 => "ЛКМ",
+                    MouseButton.Button2 => "ПКМ",
+                    MouseButton.Button3 => "СКМ",
+                    _ => "Кнопка"
+                };
+                
+                recordedEvents.Add(new InputEvent
+                {
+                    EventType = "MouseClick",
+                    X = e.Data.X,
+                    Y = e.Data.Y,
+                    MouseButton = (int)e.Data.Button,
+                    IsPressed = true,
+                    Timestamp = adjustedTicks
+                });
+                
+                Log($"🖱️ {buttonName} нажата ({e.Data.X}, {e.Data.Y})");
+            }
+        }
+        catch (Exception ex)
         {
-            EventType = "MouseClick",
-            X = e.Data.X,
-            Y = e.Data.Y,
-            MouseButton = (int)e.Data.Button,
-            IsPressed = true,
-            Timestamp = adjustedTicks
-        });
-        
-        Log($"🖱️ {buttonName} нажата ({e.Data.X}, {e.Data.Y})");
+            Console.WriteLine($"Ошибка в OnMousePressed: {ex.Message}");
+        }
     }
 
     private void OnMouseReleased(object? sender, MouseHookEventArgs e)
     {
-        if (!isRecording || isPaused) return;
-        
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
-        
-        string buttonName = e.Data.Button switch
+        try
         {
-            MouseButton.Button1 => "ЛКМ",
-            MouseButton.Button2 => "ПКМ",
-            MouseButton.Button3 => "СКМ",
-            _ => "Кнопка"
-        };
-        
-        recordedEvents.Add(new InputEvent
+            lock (_lock)
+            {
+                if (!isRecording || isPaused || hook == null) return;
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                long adjustedTicks = elapsed.Ticks - totalPauseDuration;
+                
+                string buttonName = e.Data.Button switch
+                {
+                    MouseButton.Button1 => "ЛКМ",
+                    MouseButton.Button2 => "ПКМ",
+                    MouseButton.Button3 => "СКМ",
+                    _ => "Кнопка"
+                };
+                
+                recordedEvents.Add(new InputEvent
+                {
+                    EventType = "MouseClick",
+                    X = e.Data.X,
+                    Y = e.Data.Y,
+                    MouseButton = (int)e.Data.Button,
+                    IsPressed = false,
+                    Timestamp = adjustedTicks
+                });
+                
+                Log($"🖱️ {buttonName} отпущена ({e.Data.X}, {e.Data.Y})");
+            }
+        }
+        catch (Exception ex)
         {
-            EventType = "MouseClick",
-            X = e.Data.X,
-            Y = e.Data.Y,
-            MouseButton = (int)e.Data.Button,
-            IsPressed = false,
-            Timestamp = adjustedTicks
-        });
-        
-        Log($"🖱️ {buttonName} отпущена ({e.Data.X}, {e.Data.Y})");
+            Console.WriteLine($"Ошибка в OnMouseReleased: {ex.Message}");
+        }
     }
 
     public bool IsIgnoredKey(int keyCode)
@@ -297,31 +468,41 @@ public class MacroRecorder
 
     private void OnKeyPressed(object? sender, KeyboardHookEventArgs e)
     {
-        if (!isRecording || isPaused) return;
-        
-        int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
-        
-        // Пропускаем горячие клавиши
-        if (IsIgnoredKey(virtualKeyCode))
+        try
         {
-            Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
-            return;
+            lock (_lock)
+            {
+                if (!isRecording || isPaused || hook == null) return;
+                
+                int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
+                
+                // Пропускаем горячие клавиши
+                if (IsIgnoredKey(virtualKeyCode))
+                {
+                    Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
+                    return;
+                }
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                long adjustedTicks = elapsed.Ticks - totalPauseDuration;
+                
+                recordedEvents.Add(new InputEvent
+                {
+                    EventType = "KeyPress",
+                    KeyCode = virtualKeyCode,
+                    IsPressed = true,
+                    Timestamp = adjustedTicks
+                });
+                
+                string keyName = GetKeyName(virtualKeyCode);
+                Log($"⌨️ {keyName}");
+                Console.WriteLine($"Записана клавиша: VK=0x{virtualKeyCode:X2}, SharpHook={e.Data.KeyCode}");
+            }
         }
-        
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
-        
-        recordedEvents.Add(new InputEvent
+        catch (Exception ex)
         {
-            EventType = "KeyPress",
-            KeyCode = virtualKeyCode,
-            IsPressed = true,
-            Timestamp = adjustedTicks
-        });
-        
-        string keyName = GetKeyName(virtualKeyCode);
-        Log($"⌨️ {keyName}");
-        Console.WriteLine($"Записана клавиша: VK=0x{virtualKeyCode:X2}, SharpHook={e.Data.KeyCode}");
+            Console.WriteLine($"Ошибка в OnKeyPressed: {ex.Message}");
+        }
     }
     
     private string GetKeyName(int keyCode)
@@ -371,28 +552,38 @@ public class MacroRecorder
 
     private void OnKeyReleased(object? sender, KeyboardHookEventArgs e)
     {
-        if (!isRecording || isPaused) return;
-        
-        int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
-        
-        // Пропускаем горячие клавиши
-        if (IsIgnoredKey(virtualKeyCode))
+        try
         {
-            Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
-            return;
+            lock (_lock)
+            {
+                if (!isRecording || isPaused || hook == null) return;
+                
+                int virtualKeyCode = SharpHookToVirtualKey(e.Data.KeyCode);
+                
+                // Пропускаем горячие клавиши
+                if (IsIgnoredKey(virtualKeyCode))
+                {
+                    Console.WriteLine($"Пропущена горячая клавиша: VK=0x{virtualKeyCode:X2}");
+                    return;
+                }
+                
+                TimeSpan elapsed = DateTime.Now - recordingStartTime;
+                long adjustedTicks = elapsed.Ticks - totalPauseDuration;
+                
+                recordedEvents.Add(new InputEvent
+                {
+                    EventType = "KeyPress",
+                    KeyCode = virtualKeyCode,
+                    IsPressed = false,
+                    Timestamp = adjustedTicks
+                });
+                // Отпускание клавиш не логируем отдельно
+            }
         }
-        
-        TimeSpan elapsed = DateTime.Now - recordingStartTime;
-        long adjustedTicks = elapsed.Ticks - totalPauseDuration;
-        
-        recordedEvents.Add(new InputEvent
+        catch (Exception ex)
         {
-            EventType = "KeyPress",
-            KeyCode = virtualKeyCode,
-            IsPressed = false,
-            Timestamp = adjustedTicks
-        });
-        // Отпускание клавиш не логируем отдельно
+            Console.WriteLine($"Ошибка в OnKeyReleased: {ex.Message}");
+        }
     }
 
     public void SaveToFile(string filename = "macro.json")
