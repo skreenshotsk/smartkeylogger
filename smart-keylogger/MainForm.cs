@@ -393,10 +393,11 @@ namespace MacroRecorderGUI
                 });
                 
                 var keyboardLayout = recorder.GetRecordedKeyboardLayout();
+                var durationTicks = recorder.GetRecordedDurationTicks();
                 
                 try
                 {
-                    await player.PlayEvents(events, false, playbackCancellation.Token, keyboardLayout);
+                    await player.PlayEvents(events, false, playbackCancellation.Token, keyboardLayout, durationTicks);
                 }
                 catch (OperationCanceledException)
                 {
@@ -427,6 +428,7 @@ namespace MacroRecorderGUI
                 UpdateUI();
                 
                 var keyboardLayout = recorder.GetRecordedKeyboardLayout();
+                var durationTicks = recorder.GetRecordedDurationTicks();
                 
                 // Запускаем задачу для периодического обновления UI во время технической паузы
                 var uiUpdateTask = Task.Run(async () =>
@@ -443,7 +445,7 @@ namespace MacroRecorderGUI
                 
                 try
                 {
-                    await player.PlayEvents(events, true, playbackCancellation.Token, keyboardLayout);
+                    await player.PlayEvents(events, true, playbackCancellation.Token, keyboardLayout, durationTicks);
                 }
                 catch (OperationCanceledException)
                 {

@@ -19,6 +19,7 @@ public class MacroPlayer
     private long _totalPauseDuration = 0;
     private DateTime _pauseStartTime;
     private ManualResetEventSlim _pauseWaitHandle = new ManualResetEventSlim(true);
+    private long? _savedTotalDurationTicks = null; // Сохраненная длительность записи для согласованности
 
     // свойства для таймера воспроизведения
     public TimeSpan CurrentPlaybackTime 
@@ -28,13 +29,22 @@ public class MacroPlayer
             if (!_playbackStarted || _currentEvents == null || _currentEvents.Count == 0) 
                 return TimeSpan.Zero;
             
-            // Сортируем события для расчета
-            var sortedEvents = new List<InputEvent>(_currentEvents);
-            sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-            
-            long startEventTime = sortedEvents[0].Timestamp;
-            long endEventTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
-            long totalEventDuration = endEventTime - startEventTime;
+            // Определяем общую длительность - используем сохраненную если доступна
+            long totalEventDuration;
+            if (_savedTotalDurationTicks.HasValue && _savedTotalDurationTicks.Value > 0)
+            {
+                totalEventDuration = _savedTotalDurationTicks.Value;
+            }
+            else
+            {
+                // Fallback: вычисляем из событий
+                var sortedEvents = new List<InputEvent>(_currentEvents);
+                sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+                
+                long startEventTime = sortedEvents[0].Timestamp;
+                long endEventTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
+                totalEventDuration = endEventTime - startEventTime;
+            }
             
             if (totalEventDuration <= 0)
                 return TimeSpan.Zero;
@@ -70,6 +80,13 @@ public class MacroPlayer
             if (_currentEvents == null || _currentEvents.Count == 0) 
                 return TimeSpan.Zero;
             
+            // Используем сохраненную длительность если доступна (для согласованности с логами)
+            if (_savedTotalDurationTicks.HasValue && _savedTotalDurationTicks.Value > 0)
+            {
+                return TimeSpan.FromTicks(_savedTotalDurationTicks.Value);
+            }
+            
+            // Fallback: вычисляем из событий (для старых файлов без сохраненной длительности)
             var sortedEvents = new List<InputEvent>(_currentEvents);
             sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
             
@@ -118,7 +135,7 @@ public class MacroPlayer
         };
     }
 
-    public async Task PlayEvents(List<InputEvent>? events, bool loop = false, CancellationToken cancellationToken = default, IntPtr? keyboardLayout = null)
+    public async Task PlayEvents(List<InputEvent>? events, bool loop = false, CancellationToken cancellationToken = default, IntPtr? keyboardLayout = null, long? savedDurationTicks = null)
     {
         if (events == null || events.Count == 0)
         {
@@ -133,16 +150,31 @@ public class MacroPlayer
         _currentEvents = events;
         _currentEventIndex = 0;
         _totalPauseDuration = 0;
+        _savedTotalDurationTicks = savedDurationTicks; // Сохраняем длительность для использования в свойствах
         _pauseWaitHandle.Set();
         
         // СОРТИРУЕМ события перед началом
         var eventsCopy = new List<InputEvent>(events);
         eventsCopy.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
         
-        // Сохраняем общую длительность макроса
+        // Вычисляем время начала и конца событий (нужно для воспроизведения)
         long startEventTime = eventsCopy[0].Timestamp;
         long endEventTime = eventsCopy[eventsCopy.Count - 1].Timestamp;
-        long totalMacroDuration = endEventTime - startEventTime;
+        
+        // Получаем длительность макроса - используем сохраненную длительность если доступна
+        // Это обеспечивает согласованность с логом остановки записи
+        long totalMacroDuration;
+        if (savedDurationTicks.HasValue && savedDurationTicks.Value > 0)
+        {
+            totalMacroDuration = savedDurationTicks.Value;
+        }
+        else
+        {
+            // Fallback: вычисляем из событий (для старых файлов без сохраненной длительности)
+            totalMacroDuration = endEventTime - startEventTime;
+        }
+        TimeSpan macroDuration = TimeSpan.FromTicks(totalMacroDuration);
+        string durationText = $"{macroDuration:mm\\:ss\\.ff}";
         
         // Переключаем язык клавиатуры если нужно
         if (keyboardLayout.HasValue && keyboardLayout.Value != IntPtr.Zero)
@@ -162,8 +194,8 @@ public class MacroPlayer
         {
             try
             {
-                Log($"▶ Начато воспроизведение ({events.Count} событий)");
-                Console.WriteLine($"Воспроизведение {events.Count} событий...");
+                Log($"▶ Начато воспроизведение. Длительность записи: {durationText}");
+                Console.WriteLine($"Воспроизведение. Длительность макроса: {durationText}");
                 Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
                 Console.WriteLine("Нажмите ` (Backquote) для остановки, Home для паузы");
 
@@ -199,7 +231,7 @@ public class MacroPlayer
                 {
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                    Log($"▶ Цикл воспроизведения начался ({eventsCopy.Count} событий)");
+                    Log($"▶ Цикл воспроизведения начался");
 
                     // Время начала текущего цикла
                     long cycleStartTime = DateTime.Now.Ticks - _totalPauseDuration;
@@ -311,10 +343,16 @@ public class MacroPlayer
         {
             _isPaused = true;
             _pauseStartTime = DateTime.Now;
+            
+            // получаем текущее время воспроизведения
+            TimeSpan currentPlaybackTime = CurrentPlaybackTime;
+            string timeText = $"{currentPlaybackTime:mm\\:ss\\.ff}";
+            
             _pauseWaitHandle.Reset();
             ReleaseAllKeys();
-            Log("⏸ Воспроизведение приостановлено");
-            Console.WriteLine("Воспроизведение приостановлено");
+            
+            Log($"⏸ Воспроизведение приостановлено на {timeText}");
+            Console.WriteLine($"Воспроизведение приостановлено на {timeText}");
         }
     }
 

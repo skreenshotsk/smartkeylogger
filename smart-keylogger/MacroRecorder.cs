@@ -9,6 +9,7 @@ using System.Linq;
 public class MacroRecorder
 {
     private TaskPoolGlobalHook? hook;
+    private readonly object _lock = new object();
     private List<InputEvent> recordedEvents = new List<InputEvent>();
     private bool isRecording = false;
     private bool isPaused = false; // НОВОЕ поле для состояния паузы
@@ -17,6 +18,7 @@ public class MacroRecorder
     private long totalPauseDuration = 0; // Общее время паузы в тиках
     private long? recordedKeyboardLayout = null;
     private bool trackLanguage = false;
+    private long? loadedDurationTicks = null; // Длительность загруженного макроса
 
     // НОВЫЕ свойства для таймера записи
     public TimeSpan RecordingDuration 
@@ -144,6 +146,8 @@ public class MacroRecorder
         recordingStartTime = DateTime.Now;
         trackLanguage = trackLang;
         recordedKeyboardLayout = null;
+        savedDurationTicks = null;
+        loadedDurationTicks = null;
         
         if (trackLanguage)
         {
@@ -168,36 +172,49 @@ public class MacroRecorder
         hook.RunAsync();
     }
 
-    // НОВЫЙ метод для паузы записи
     public void PauseRecording()
     {
         if (!isRecording || isPaused) return;
         
         isPaused = true;
         pauseStartTime = DateTime.Now;
-        Log("⏸ Запись приостановлена");
-        Console.WriteLine("Запись приостановлена");
+        
+        // получаем текущую длительность записи
+        TimeSpan currentDuration = RecordingDuration;
+        string timeText = $"{currentDuration:mm\\:ss\\.ff}";
+        
+        Log($"⏸ Запись приостановлена на {timeText}");
+        Console.WriteLine($"Запись приостановлена на {timeText}");
     }
 
-    // НОВЫЙ метод для возобновления записи
     public void ResumeRecording()
     {
         if (!isRecording || !isPaused) return;
         
         isPaused = false;
         totalPauseDuration += (DateTime.Now - pauseStartTime).Ticks;
-        Log("▶ Запись возобновлена");
+        Log($"▶ Запись возобновлена");
         Console.WriteLine("Запись возобновлена");
     }
 
+    private long? savedDurationTicks = null; // Сохраняем длительность для использования при сохранении
+
     public void StopRecording()
     {
+        // получаем длительность записи
+        TimeSpan recordingDuration = RecordingDuration;
+        string durationText = $"{recordingDuration:mm\\:ss\\.ff}";
+        
+        // Сохраняем длительность в тиках для использования при сохранении
+        savedDurationTicks = recordingDuration.Ticks;
+
         isRecording = false;
         isPaused = false;
         hook?.Dispose();
         hook = null;
-        Log($"⏹ Запись остановлена. Событий записано: {recordedEvents.Count}");
-        Console.WriteLine("Запись остановлена.");
+        
+        Log($"⏹ Запись остановлена. Длительность записи: {durationText}");
+        Console.WriteLine($"Запись остановлена. Длительность: {durationText}");
     }
 
     private void OnMouseMoved(object? sender, MouseHookEventArgs e)
@@ -389,7 +406,8 @@ public class MacroRecorder
             var macroData = new MacroData
             {
                 Events = filteredEvents,
-                KeyboardLayout = recordedKeyboardLayout
+                KeyboardLayout = recordedKeyboardLayout,
+                DurationTicks = savedDurationTicks
             };
 
             var options = new System.Text.Json.JsonSerializerOptions 
@@ -430,6 +448,7 @@ public class MacroRecorder
                 if (macroData != null && macroData.Events != null)
                 {
                     recordedKeyboardLayout = macroData.KeyboardLayout;
+                    loadedDurationTicks = macroData.DurationTicks; // Сохраняем длительность
                     if (recordedKeyboardLayout.HasValue)
                     {
                         IntPtr layout = new IntPtr(recordedKeyboardLayout.Value);
@@ -496,5 +515,10 @@ public class MacroRecorder
     public int GetRecordedEventsCount()
     {
         return recordedEvents.Count;
+    }
+    
+    public long? GetRecordedDurationTicks()
+    {
+        return loadedDurationTicks;
     }
 }
