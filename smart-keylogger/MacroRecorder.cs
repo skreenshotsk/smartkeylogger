@@ -712,4 +712,12 @@ public class MacroRecorder
     {
         return loadedDurationTicks;
     }
+    
+    public List<InputEvent> GetRecordedEvents()
+    {
+        lock (_lock)
+        {
+            return new List<InputEvent>(recordedEvents);
+        }
+    }
 }

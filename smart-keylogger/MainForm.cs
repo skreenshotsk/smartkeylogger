@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,6 +25,21 @@ namespace MacroRecorderGUI
         private List<string> savedMacroFiles = new List<string>(); // Список файлов в директории приложения
         private string currentMacroFile = ""; // Текущий выбранный файл для воспроизведения
         private string macrosDirectory = ""; // Директория для сохранения макросов
+        
+        // Сохраненные горячие клавиши
+        private Dictionary<int, Keys> savedHotkeys = new Dictionary<int, Keys>();
+        private Dictionary<int, uint> savedHotkeyModifiers = new Dictionary<int, uint>();
+        
+        // Клавиши, которые могут использоваться системой
+        private HashSet<Keys> systemKeys = new HashSet<Keys>
+        {
+            Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F6, Keys.F7, Keys.F8,
+            Keys.F9, Keys.F10, Keys.F11, Keys.F12,
+            Keys.Escape, Keys.Tab, Keys.CapsLock, Keys.NumLock, Keys.Scroll,
+            Keys.PrintScreen, Keys.Insert, Keys.Delete,
+            Keys.Alt, Keys.Control, Keys.Shift,
+            Keys.LWin, Keys.RWin, Keys.Apps
+        };
 
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
@@ -206,41 +222,45 @@ namespace MacroRecorderGUI
     {
         UnregisterGlobalHotkeys();
         
-        // Добавляем константы для модификаторов
-        const int MOD_CONTROL = 0x0002;
-        const int MOD_ALT = 0x0001;
-        
-        // Регистрируем глобальные горячие клавиши
-        bool result;
-        
-        result = RegisterHotKey(this.Handle, HOTKEY_START_RECORD, MOD_NONE, (uint)Keys.F9);
-        Console.WriteLine($"F9 регистрация: {result}");
-        
-        result = RegisterHotKey(this.Handle, HOTKEY_STOP_RECORD, MOD_NONE, (uint)Keys.F10);
-        Console.WriteLine($"F10 регистрация: {result}");
-        
-        result = RegisterHotKey(this.Handle, HOTKEY_PLAY, MOD_NONE, (uint)Keys.F11);
-        Console.WriteLine($"F11 регистрация: {result}");
-        
-        // ИЗМЕНЕНИЕ: Ctrl+F12 для цикла вместо F12
-        result = RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_CONTROL, (uint)Keys.F12);
-        Console.WriteLine($"Ctrl+F12 регистрация: {result}");
-        
-        // Если не сработало Ctrl+F12, пробуем Alt+F12
-        if (!result)
-        {
-            result = RegisterHotKey(this.Handle, HOTKEY_PLAY_LOOP, MOD_ALT, (uint)Keys.F12);
-            Console.WriteLine($"Alt+F12 регистрация: {result}");
+            // Используем сохраненные горячие клавиши или значения по умолчанию
+            RegisterSingleHotkey(HOTKEY_START_RECORD, 
+                savedHotkeys.ContainsKey(HOTKEY_START_RECORD) ? savedHotkeys[HOTKEY_START_RECORD] : Keys.F9,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_START_RECORD) ? savedHotkeyModifiers[HOTKEY_START_RECORD] : MOD_NONE);
+            
+            RegisterSingleHotkey(HOTKEY_STOP_RECORD,
+                savedHotkeys.ContainsKey(HOTKEY_STOP_RECORD) ? savedHotkeys[HOTKEY_STOP_RECORD] : Keys.F10,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_STOP_RECORD) ? savedHotkeyModifiers[HOTKEY_STOP_RECORD] : MOD_NONE);
+            
+            RegisterSingleHotkey(HOTKEY_PLAY,
+                savedHotkeys.ContainsKey(HOTKEY_PLAY) ? savedHotkeys[HOTKEY_PLAY] : Keys.F11,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_PLAY) ? savedHotkeyModifiers[HOTKEY_PLAY] : MOD_NONE);
+            
+            RegisterSingleHotkey(HOTKEY_PLAY_LOOP,
+                savedHotkeys.ContainsKey(HOTKEY_PLAY_LOOP) ? savedHotkeys[HOTKEY_PLAY_LOOP] : Keys.F12,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_PLAY_LOOP) ? savedHotkeyModifiers[HOTKEY_PLAY_LOOP] : 0x0002); // MOD_CONTROL
+            
+            RegisterSingleHotkey(HOTKEY_STOP_PLAY,
+                savedHotkeys.ContainsKey(HOTKEY_STOP_PLAY) ? savedHotkeys[HOTKEY_STOP_PLAY] : (Keys)0xC0,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_STOP_PLAY) ? savedHotkeyModifiers[HOTKEY_STOP_PLAY] : MOD_NONE);
+            
+            RegisterSingleHotkey(HOTKEY_PAUSE_RECORD,
+                savedHotkeys.ContainsKey(HOTKEY_PAUSE_RECORD) ? savedHotkeys[HOTKEY_PAUSE_RECORD] : Keys.Pause,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_PAUSE_RECORD) ? savedHotkeyModifiers[HOTKEY_PAUSE_RECORD] : MOD_NONE);
+            
+            RegisterSingleHotkey(HOTKEY_PAUSE_PLAYBACK,
+                savedHotkeys.ContainsKey(HOTKEY_PAUSE_PLAYBACK) ? savedHotkeys[HOTKEY_PAUSE_PLAYBACK] : Keys.Home,
+                savedHotkeyModifiers.ContainsKey(HOTKEY_PAUSE_PLAYBACK) ? savedHotkeyModifiers[HOTKEY_PAUSE_PLAYBACK] : MOD_NONE);
         }
         
-        result = RegisterHotKey(this.Handle, HOTKEY_STOP_PLAY, MOD_NONE, VK_BACKQUOTE);
-        Console.WriteLine($"Backquote регистрация: {result}");
-        
-        result = RegisterHotKey(this.Handle, HOTKEY_PAUSE_RECORD, MOD_NONE, VK_PAUSE);
-        Console.WriteLine($"Pause регистрация: {result}");
-        
-        result = RegisterHotKey(this.Handle, HOTKEY_PAUSE_PLAYBACK, MOD_NONE, VK_HOME);
-        Console.WriteLine($"Home регистрация: {result}");
+        private void RegisterSingleHotkey(int hotkeyId, Keys key, uint modifier)
+        {
+            uint vk = (uint)key;
+            if (key == (Keys)0xC0) vk = VK_BACKQUOTE;
+            else if (key == Keys.Pause) vk = VK_PAUSE;
+            else if (key == Keys.Home) vk = VK_HOME;
+            
+            bool result = RegisterHotKey(this.Handle, hotkeyId, modifier, vk);
+            Console.WriteLine($"Hotkey {hotkeyId} ({key}, mod={modifier}) регистрация: {result}");
     }
 
         private void UnregisterGlobalHotkeys()
@@ -271,16 +291,35 @@ namespace MacroRecorderGUI
                         BeginInvoke(new Action(StartRecording));
                         break;
                     case HOTKEY_STOP_RECORD:
+                        if (isAppendingToMacro || isReplacingAction || isReplacingMouseMoves)
+                        {
+                            BeginInvoke(new Action(() => {
+                                StopRecording(); // Это сохранит запись в макрос или заменит действие
+                            }));
+                        }
+                        else
+                        {
                         BeginInvoke(new Action(StopRecording));
+                        }
+                        break;
+                    case HOTKEY_STOP_PLAY:
+                        if (isAppendingToMacro || isReplacingAction || isReplacingMouseMoves)
+                        {
+                            // Отменяем дозапись/замену
+                            BeginInvoke(new Action(() => {
+                                CancelAppendingToMacro();
+                            }));
+                        }
+                        else
+                        {
+                            BeginInvoke(new Action(StopPlayback));
+                        }
                         break;
                     case HOTKEY_PLAY:
                         BeginInvoke(new Action(PlayMacro));
                         break;
                     case HOTKEY_PLAY_LOOP:
                         BeginInvoke(new Action(PlayMacroLoop));
-                        break;
-                    case HOTKEY_STOP_PLAY:
-                        BeginInvoke(new Action(StopPlayback));
                         break;
                     case HOTKEY_PAUSE_RECORD:
                         BeginInvoke(new Action(TogglePauseRecording));
@@ -303,6 +342,86 @@ namespace MacroRecorderGUI
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            // Если ожидаем нажатие клавиши для горячей клавиши (в настройках)
+            if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue)
+            {
+                Keys key = GetKeyWithoutModifiers(keyData);
+                uint modifier = GetModifierFromKeys(keyData);
+                
+                // Проверяем, является ли клавиша системной
+                bool isSystemKey = systemKeys.Contains(key);
+                if (isSystemKey)
+                {
+                    var result = MessageBox.Show(
+                        "Предупреждение: эта клавиша может использоваться системой, в случае, если она не работает, попробуйте другую клавишу или сочетание клавиш.\n\nПродолжить?",
+                        "Предупреждение",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    
+                    if (result == DialogResult.No)
+                    {
+                        waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+                        waitingForHotkeyButton = null;
+                        waitingForHotkeyId = null;
+                        return true;
+                    }
+                }
+                
+                // Сохраняем новую горячую клавишу
+                savedHotkeys[waitingForHotkeyId.Value] = key;
+                savedHotkeyModifiers[waitingForHotkeyId.Value] = modifier;
+                
+                // Преобразуем Keys в строку
+                string keyString = FormatKeysToString(keyData, modifier);
+                
+                // Обновляем текст кнопки
+                waitingForHotkeyButton.Text = keyString;
+                waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+                
+                // Обновляем Tag кнопки
+                waitingForHotkeyButton.Tag = new { HotkeyId = waitingForHotkeyId.Value, Key = key, Mod = modifier };
+                
+                // Регистрируем новую горячую клавишу
+                RegisterSingleHotkey(waitingForHotkeyId.Value, key, modifier);
+                
+                AddLog($"⌨️ Установлена горячая клавиша для {GetHotkeyActionName(waitingForHotkeyId.Value)}: {keyString}");
+                
+                waitingForHotkeyButton = null;
+                waitingForHotkeyId = null;
+                
+                return true; // Обработали нажатие
+            }
+            
+            if (msg.Msg == WM_HOTKEY)
+            {
+                int id = msg.WParam.ToInt32();
+                
+                switch (id)
+                {
+                    case HOTKEY_START_RECORD:
+                        StartRecording();
+                        return true;
+                    case HOTKEY_STOP_RECORD:
+                        StopRecording();
+                        return true;
+                    case HOTKEY_PLAY:
+                        PlayMacro();
+                        return true;
+                    case HOTKEY_PLAY_LOOP:
+                        PlayMacroLoop();
+                        return true;
+                    case HOTKEY_STOP_PLAY:
+                        StopPlayback();
+                        return true;
+                    case HOTKEY_PAUSE_RECORD:
+                        TogglePauseRecording();
+                        return true;
+                    case HOTKEY_PAUSE_PLAYBACK:
+                        TogglePausePlayback();
+                        return true;
+                }
+            }
+            
             if (isPlaying && (int)keyData == 0xC0)
             {
                 StopPlayback();
@@ -422,10 +541,283 @@ namespace MacroRecorderGUI
             recordingTimer?.Stop();
             recorder.StopRecording();
             
+            // Если мы в режиме дозаписи в макрос
+            if (isAppendingToMacro)
+            {
+                AppendRecordedEventsToMacro();
+                isAppendingToMacro = false;
+            UpdateUI();
+                return;
+            }
+            
+            // Если мы в режиме замены действия
+            if (isReplacingAction && actionToReplaceIndex >= 0)
+            {
+                ReplaceActionInMacro();
+                isReplacingAction = false;
+                actionToReplaceIndex = -1;
+                UpdateUI();
+                return;
+            }
+            
+            // Если мы в режиме замены движений мыши
+            if (isReplacingMouseMoves && mouseMovesStartIndex >= 0)
+            {
+                ReplaceMouseMovesInMacro();
+                isReplacingMouseMoves = false;
+                mouseMovesStartIndex = -1;
+                mouseMovesCountToReplace = 0;
+                UpdateUI();
+                return;
+            }
+            
             // Показываем диалог сохранения
             SaveRecordingDialog();
             
             UpdateUI();
+        }
+        
+        private void ReplaceActionInMacro()
+        {
+            if (currentEditingEvents == null || recorder == null || actionToReplaceIndex < 0 || actionToReplaceIndex >= currentEditingEvents.Count) return;
+            
+            var recordedEvents = recorder.GetRecordedEvents();
+            if (recordedEvents == null || recordedEvents.Count == 0)
+            {
+                AddLog("⚠️ Не записано ни одного действия для замены");
+                return;
+            }
+            
+            // Берем первое записанное событие и заменяем им старое
+            var newEvent = new InputEvent
+            {
+                EventType = recordedEvents[0].EventType,
+                Timestamp = currentEditingEvents[actionToReplaceIndex].Timestamp, // Сохраняем timestamp
+                X = recordedEvents[0].X,
+                Y = recordedEvents[0].Y,
+                KeyCode = recordedEvents[0].KeyCode,
+                MouseButton = recordedEvents[0].MouseButton,
+                IsPressed = recordedEvents[0].IsPressed
+            };
+            
+            currentEditingEvents[actionToReplaceIndex] = newEvent;
+            
+            // Сохраняем макрос
+            if (currentEditingMacroFile != null)
+            {
+                string filePath = Path.Combine(macrosDirectory, currentEditingMacroFile);
+                SaveMacroEvents(filePath);
+                AddLog($"🔄 Действие заменено в макросе {currentEditingMacroFile}");
+            }
+            
+            // Обновляем интерфейс
+            RefreshMacroDetailsPanel();
+            
+            // Возвращаемся в настройки если они были открыты
+            if (panelSettings != null && !panelSettings.Visible)
+            {
+                ShowSettingsPanel();
+            }
+        }
+        
+        private void ReplaceMouseMovesInMacro()
+        {
+            if (currentEditingEvents == null || recorder == null || mouseMovesStartIndex < 0) return;
+            
+            var recordedEvents = recorder.GetRecordedEvents();
+            if (recordedEvents == null || recordedEvents.Count == 0)
+            {
+                AddLog("⚠️ Не записано ни одного движения мыши для замены");
+                return;
+            }
+            
+            // Фильтруем только MouseMove события
+            var mouseMoves = recordedEvents.Where(e => e.EventType == "MouseMove").ToList();
+            if (mouseMoves.Count == 0)
+            {
+                AddLog("⚠️ В записи нет движений мыши");
+                return;
+            }
+            
+            // Удаляем старые движения мыши
+            int removed = 0;
+            for (int i = mouseMovesStartIndex; i < currentEditingEvents.Count && removed < mouseMovesCountToReplace;)
+            {
+                if (currentEditingEvents[i].EventType == "MouseMove")
+                {
+                    currentEditingEvents.RemoveAt(i);
+                    removed++;
+                }
+                else
+                {
+                    i++;
+                }
+            }
+            
+            // Вставляем новые движения мыши на то же место с правильным timestamp
+            long baseTimestamp = mouseMovesStartIndex > 0 && mouseMovesStartIndex <= currentEditingEvents.Count 
+                ? currentEditingEvents[Math.Max(0, mouseMovesStartIndex - 1)].Timestamp + 1000000 
+                : 0;
+            
+            for (int i = 0; i < mouseMoves.Count; i++)
+            {
+                var newMove = new InputEvent
+                {
+                    EventType = "MouseMove",
+                    Timestamp = baseTimestamp + (i * 100000), // Небольшие интервалы между движениями
+                    X = mouseMoves[i].X,
+                    Y = mouseMoves[i].Y
+                };
+                currentEditingEvents.Insert(mouseMovesStartIndex + i, newMove);
+            }
+            
+            // Сохраняем макрос
+            if (currentEditingMacroFile != null)
+            {
+                string filePath = Path.Combine(macrosDirectory, currentEditingMacroFile);
+                SaveMacroEvents(filePath);
+                AddLog($"🔄 Движения мыши заменены в макросе {currentEditingMacroFile}");
+            }
+            
+            // Обновляем интерфейс
+            RefreshMacroDetailsPanel();
+        }
+        
+        private void RefreshMacroDetailsPanel()
+        {
+            // Всегда обновляем, даже если настройки не видны
+            if (currentEditingMacroFile != null && currentMacroDetailsPanel != null)
+            {
+                // Обновляем панель напрямую через сохраненную ссылку
+                ShowMacroDetails(currentEditingMacroFile, currentMacroDetailsPanel);
+            }
+            else if (panelSettings != null && panelSettings.Visible && currentEditingMacroFile != null)
+            {
+                Panel? rightPanel = null;
+                foreach (Control ctrl in settingsContentPanel?.Controls ?? new ControlCollection(this))
+                {
+                    if (ctrl is Panel p && p.Dock == DockStyle.Fill && p.BackColor == System.Drawing.Color.White)
+                    {
+                        rightPanel = p;
+                        break;
+                    }
+                }
+                
+                if (rightPanel != null)
+                {
+                    ShowMacroDetails(currentEditingMacroFile, rightPanel);
+                }
+                else
+                {
+                    ShowMacrosSettings();
+                }
+            }
+        }
+        
+        private void CancelAppendingToMacro()
+        {
+            if ((!isAppendingToMacro && !isReplacingAction && !isReplacingMouseMoves) || recorder == null) return;
+            
+            isAppendingToMacro = false;
+            isReplacingAction = false;
+            isReplacingMouseMoves = false;
+            actionToReplaceIndex = -1;
+            mouseMovesStartIndex = -1;
+            mouseMovesCountToReplace = 0;
+            isRecording = false;
+            recordingTimer?.Stop();
+            recorder.StopRecording();
+            
+            AddLog("❌ Запись отменена");
+            UpdateUI();
+            
+            // Возвращаемся в настройки если они были открыты
+            if (panelSettings != null)
+            {
+                ShowSettingsPanel();
+            }
+        }
+        
+        private void AppendRecordedEventsToMacro()
+        {
+            if (currentEditingEvents == null || recorder == null) return;
+            
+            // Получаем записанные события из recorder
+            var recordedEvents = recorder.GetRecordedEvents();
+            if (recordedEvents == null || recordedEvents.Count == 0)
+            {
+                AddLog("⚠️ Не записано ни одного действия для добавления");
+                isAppendingToMacro = false;
+                return;
+            }
+            
+            // Вычисляем максимальный timestamp в текущих событиях
+            long maxTimestamp = currentEditingEvents.Count > 0 
+                ? currentEditingEvents.Max(e => e.Timestamp) 
+                : 0;
+            
+            // Добавляем новые события с корректным timestamp
+            foreach (var evt in recordedEvents)
+            {
+                var newEvent = new InputEvent
+                {
+                    EventType = evt.EventType,
+                    Timestamp = maxTimestamp + evt.Timestamp + 10000000, // +1 секунда после последнего
+                    X = evt.X,
+                    Y = evt.Y,
+                    KeyCode = evt.KeyCode,
+                    MouseButton = evt.MouseButton,
+                    IsPressed = evt.IsPressed
+                };
+                currentEditingEvents.Add(newEvent);
+            }
+            
+            // Сохраняем обновленный макрос
+            if (currentEditingMacroFile != null)
+            {
+                string filePath = Path.Combine(macrosDirectory, currentEditingMacroFile);
+                SaveMacroEvents(filePath);
+                AddLog($"➕ Добавлено {recordedEvents.Count} действий в макрос {currentEditingMacroFile}");
+            }
+            
+            isAppendingToMacro = false;
+            
+            // Возвращаемся в настройки и показываем обновленный макрос
+            if (panelSettings != null && !panelSettings.Visible)
+            {
+                ShowSettingsPanel();
+            }
+            
+            // Переключаемся на вкладку макросов и обновляем панель
+            if (btnTabMacros != null && settingsContentPanel != null)
+            {
+                SwitchTab("macros");
+                ShowMacrosSettings();
+                
+                // Убеждаемся, что выбран правильный макрос
+                if (currentEditingMacroFile != null)
+                {
+                    // Находим правую панель и показываем детали макроса
+                    Panel? rightPanel = null;
+                    foreach (Control ctrl in settingsContentPanel.Controls)
+                    {
+                        if (ctrl is Panel p && p.Dock == DockStyle.Fill && p.BackColor == System.Drawing.Color.White)
+                        {
+                            rightPanel = p;
+                            break;
+                        }
+                    }
+                    
+                    if (rightPanel != null)
+                    {
+                        ShowMacroDetails(currentEditingMacroFile, rightPanel);
+                    }
+                }
+            }
+            else
+            {
+                RefreshMacroDetailsPanel();
+            }
         }
         
         private void SaveRecordingDialog()
@@ -984,14 +1376,1949 @@ namespace MacroRecorderGUI
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Горячие клавиши работают даже когда окно свернуто!\n\n" +
-                           "Для остановки воспроизведения нажмите ` (Backquote) - клавиша над Tab\n" +
-                           "Для паузы записи нажмите Pause/Break\n" +
-                           "Для паузы воспроизведения нажмите Home\n" +
-                           "Обычно находится слева от цифры 1 на стандартной клавиатуре", 
-                           "Информация", 
-                           MessageBoxButtons.OK, 
-                           MessageBoxIcon.Information);
+            ShowSettingsPanel();
+        }
+        
+        private void ShowSettingsPanel()
+        {
+            if (panelSettings == null) 
+            {
+                AddLog("❌ Ошибка: panelSettings не инициализирован");
+                return;
+            }
+            
+            // Инициализируем панель настроек при первом открытии
+            if (panelSettings.Controls.Count == 0)
+            {
+                InitializeSettingsPanel();
+            }
+            
+            // Убеждаемся, что панель настроек добавлена в форму
+            if (!this.Controls.Contains(panelSettings))
+            {
+                this.Controls.Add(panelSettings);
+                panelSettings.BringToFront();
+            }
+            
+            // Переключаем видимость панелей
+            panelMain.Visible = false;
+            panelLogs.Visible = false; // Скрываем логи при открытии настроек
+            panelSettings.Visible = true;
+            panelSettings.BringToFront();
+            
+            AddLog("⚙️ Открыто меню настроек");
+        }
+        
+        private void HideSettingsPanel()
+        {
+            if (panelSettings == null) return;
+            
+            panelMain.Visible = true;
+            panelLogs.Visible = true; // Показываем логи обратно
+            panelSettings.Visible = false;
+            AddLog("◀ Возврат на главный экран");
+        }
+        
+        private Button? btnTabHotkeys = null;
+        private Button? btnTabMacros = null;
+        private Panel? settingsContentPanel = null;
+        
+        private void InitializeSettingsPanel()
+        {
+            if (panelSettings == null) 
+            {
+                AddLog("❌ Ошибка: panelSettings равен null при инициализации");
+                return;
+            }
+            
+            panelSettings.Controls.Clear();
+            panelSettings.BackColor = System.Drawing.Color.White;
+            panelSettings.Dock = DockStyle.Fill;
+            
+            // КОНТЕЙНЕР ДЛЯ СОДЕРЖИМОГО - добавляем ПЕРВЫМ (будет заполнять все пространство, но под header и tabs)
+            settingsContentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = System.Drawing.Color.White,
+                AutoScroll = true
+            };
+            
+            // ПАНЕЛЬ С КНОПКОЙ "НАЗАД" И ВКЛАДКАМИ - добавляем ВТОРЫМ (будет под header)
+            Panel tabsPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 50,
+                BackColor = System.Drawing.Color.White,
+                Padding = new Padding(30, 10, 30, 10)
+            };
+            
+            // Кнопка "Назад"
+            Button btnBack = new Button
+            {
+                Text = "◀ НАЗАД",
+                Size = new System.Drawing.Size(120, 40),
+                Location = new System.Drawing.Point(10, 10),
+                Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(98, 98, 98),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 }
+            };
+            btnBack.Click += (s, e) => HideSettingsPanel();
+            tabsPanel.Controls.Add(btnBack);
+            
+            // Вкладки - справа от кнопки "Назад" (ближе к кнопке)
+            btnTabHotkeys = new Button
+            {
+                Text = "ГОРЯЧИЕ КЛАВИШИ",
+                Size = new System.Drawing.Size(280, 40),
+                Location = new System.Drawing.Point(140, 10),
+                Font = new System.Drawing.Font("Segoe UI", 12F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(33, 150, 243),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Tag = "hotkeys"
+            };
+            
+            btnTabMacros = new Button
+            {
+                Text = "РЕДАКТИРОВАНИЕ МАКРОСОВ",
+                Size = new System.Drawing.Size(280, 40),
+                Location = new System.Drawing.Point(430, 10),
+                Font = new System.Drawing.Font("Segoe UI", 12F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(189, 189, 189),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Tag = "macros"
+            };
+            
+            btnTabHotkeys.Click += (s, e) => {
+                SwitchTab("hotkeys");
+                ShowHotkeysSettings();
+            };
+            btnTabMacros.Click += (s, e) => {
+                SwitchTab("macros");
+                ShowMacrosSettings();
+            };
+            
+            tabsPanel.Controls.Add(btnTabHotkeys);
+            tabsPanel.Controls.Add(btnTabMacros);
+            
+            // HEADER - добавляем ПОСЛЕДНИМ (будет в самом верху, так как Dock.Top добавляется снизу вверх)
+            Panel headerPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 80,
+                BackColor = System.Drawing.Color.FromArgb(80, 80, 80)
+            };
+            
+            Label lblSettingsTitle = new Label
+            {
+                Text = "⚙️ НАСТРОЙКИ",
+                Dock = DockStyle.Fill,
+                Font = new System.Drawing.Font("Segoe UI", 20F, FontStyle.Bold),
+                ForeColor = System.Drawing.Color.White,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            headerPanel.Controls.Add(lblSettingsTitle);
+            
+            // Важно: добавляем в обратном порядке из-за Dock.Top
+            // Сначала добавляем settingsContentPanel (Fill), потом tabsPanel (Top), потом headerPanel (Top)
+            panelSettings.Controls.Add(settingsContentPanel);
+            panelSettings.Controls.Add(tabsPanel);
+            panelSettings.Controls.Add(headerPanel); // Будет вверху, так как добавлен последним
+            
+            // Показываем настройки горячих клавиш по умолчанию
+            SwitchTab("hotkeys");
+            ShowHotkeysSettings();
+        }
+        
+        private void SwitchTab(string activeTab)
+        {
+            if (btnTabHotkeys == null || btnTabMacros == null) return;
+            
+            if (activeTab == "hotkeys")
+            {
+                btnTabHotkeys.BackColor = System.Drawing.Color.FromArgb(33, 150, 243);
+                btnTabMacros.BackColor = System.Drawing.Color.FromArgb(189, 189, 189);
+            }
+            else if (activeTab == "macros")
+            {
+                btnTabHotkeys.BackColor = System.Drawing.Color.FromArgb(189, 189, 189);
+                btnTabMacros.BackColor = System.Drawing.Color.FromArgb(33, 150, 243);
+            }
+        }
+        
+        private void ShowHotkeysSettings()
+        {
+            if (settingsContentPanel == null) 
+            {
+                AddLog("❌ Ошибка: settingsContentPanel не инициализирован");
+                return;
+            }
+            
+            settingsContentPanel.Controls.Clear();
+            settingsContentPanel.Padding = new Padding(30, 10, 30, 30); // Небольшой верхний отступ
+            
+            // Внутренняя панель для прокрутки - используем Dock.Fill чтобы правильно учитывать padding родителя
+            Panel scrollablePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = System.Drawing.Color.White,
+                AutoScroll = true
+            };
+            
+            // Заголовок секции
+            Label lblTitle = new Label
+            {
+                Text = "Настройка горячих клавиш",
+                Font = new System.Drawing.Font("Segoe UI", 16F, FontStyle.Bold),
+                ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                AutoSize = true,
+                Location = new System.Drawing.Point(0, 0),
+                Margin = new Padding(0, 0, 0, 0)
+            };
+            scrollablePanel.Controls.Add(lblTitle);
+            
+            // Список горячих клавиш для настройки
+            int yPos = 50;
+            var hotkeyActions = new[]
+            {
+                new { Name = "Начать запись", DefaultKey = Keys.F9, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_START_RECORD },
+                new { Name = "Сохранить запись", DefaultKey = Keys.F10, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_STOP_RECORD },
+                new { Name = "Воспроизвести", DefaultKey = Keys.F11, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_PLAY },
+                new { Name = "Воспроизвести в цикле", DefaultKey = Keys.F12, DefaultMod = (uint)0x0002, HotkeyId = HOTKEY_PLAY_LOOP }, // MOD_CONTROL
+                new { Name = "Пауза записи", DefaultKey = Keys.Pause, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_PAUSE_RECORD },
+                new { Name = "Пауза воспроизведения", DefaultKey = Keys.Home, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_PAUSE_PLAYBACK },
+                new { Name = "Остановить воспроизведение", DefaultKey = (Keys)0xC0, DefaultMod = (uint)MOD_NONE, HotkeyId = HOTKEY_STOP_PLAY } // Backquote
+            };
+            
+            // Загружаем сохраненные горячие клавиши или используем значения по умолчанию
+            foreach (var action in hotkeyActions)
+            {
+                if (!savedHotkeys.ContainsKey(action.HotkeyId))
+                {
+                    savedHotkeys[action.HotkeyId] = action.DefaultKey;
+                    savedHotkeyModifiers[action.HotkeyId] = action.DefaultMod;
+                }
+            }
+            
+            foreach (var action in hotkeyActions)
+            {
+                // Получаем сохраненное значение или значение по умолчанию
+                Keys currentKey = savedHotkeys.ContainsKey(action.HotkeyId) ? savedHotkeys[action.HotkeyId] : action.DefaultKey;
+                uint currentMod = savedHotkeyModifiers.ContainsKey(action.HotkeyId) ? savedHotkeyModifiers[action.HotkeyId] : action.DefaultMod;
+                string keyText = FormatKeysToString(currentKey, currentMod);
+                
+                // Панель для одной строки
+                Panel rowPanel = new Panel
+                {
+                    Height = 50,
+                    Width = scrollablePanel.ClientSize.Width,
+                    Location = new System.Drawing.Point(0, yPos),
+                    BackColor = System.Drawing.Color.Transparent,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                };
+                
+                Label lblAction = new Label
+                {
+                    Text = action.Name,
+                    Font = new System.Drawing.Font("Segoe UI", 12F),
+                    ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(0, 12)
+                };
+                rowPanel.Controls.Add(lblAction);
+                
+                // Кликабельное поле для горячей клавиши
+                Button btnHotkey = new Button
+                {
+                    Text = keyText,
+                    Size = new System.Drawing.Size(220, 40),
+                    Location = new System.Drawing.Point(280, 5),
+                    Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                    BackColor = System.Drawing.Color.White,
+                    ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                    FlatStyle = FlatStyle.Flat,
+                    FlatAppearance = { 
+                        BorderSize = 1, 
+                        BorderColor = System.Drawing.Color.FromArgb(189, 189, 189)
+                    },
+                    Cursor = Cursors.Hand,
+                    Tag = new { HotkeyId = action.HotkeyId, Key = currentKey, Mod = currentMod }
+                };
+                btnHotkey.Click += (s, e) => ChangeHotkey(btnHotkey, action.HotkeyId);
+                btnHotkey.MouseEnter += (s, e) => {
+                    btnHotkey.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(33, 150, 243);
+                };
+                btnHotkey.MouseLeave += (s, e) => {
+                    if (waitingForHotkeyButton != btnHotkey)
+                        btnHotkey.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(189, 189, 189);
+                };
+                rowPanel.Controls.Add(btnHotkey);
+                
+                scrollablePanel.Controls.Add(rowPanel);
+                yPos += 55;
+            }
+            
+            // Кнопка "Вернуть настройки по умолчанию"
+            Button btnReset = new Button
+            {
+                Text = "Вернуться к изначальным настройкам",
+                Size = new System.Drawing.Size(320, 45),
+                Location = new System.Drawing.Point(0, yPos + 30),
+                Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(244, 67, 54),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Cursor = Cursors.Hand
+            };
+            btnReset.Click += (s, e) => ResetHotkeysToDefault();
+            scrollablePanel.Controls.Add(btnReset);
+            
+            // Предупреждение
+            Label lblWarning = new Label
+            {
+                Text = "⚠️ Предупреждение: некоторые клавиши (F1-F12 и др.) могут использоваться системой",
+                Font = new System.Drawing.Font("Segoe UI", 9F, FontStyle.Italic),
+                ForeColor = System.Drawing.Color.FromArgb(244, 67, 54),
+                AutoSize = true,
+                Location = new System.Drawing.Point(0, yPos + 90),
+                MaximumSize = new System.Drawing.Size(scrollablePanel.ClientSize.Width - 20, 0)
+            };
+            scrollablePanel.Controls.Add(lblWarning);
+            
+            // Внутренний контейнер с фиксированной высотой для правильной прокрутки
+            Panel contentContainer = new Panel
+            {
+                Height = yPos + 180,
+                BackColor = System.Drawing.Color.Transparent,
+                AutoSize = false
+            };
+            
+            // Перемещаем все элементы из scrollablePanel в contentContainer
+            var controlsToMove = scrollablePanel.Controls.Cast<Control>().ToList();
+            scrollablePanel.Controls.Clear();
+            
+            foreach (var ctrl in controlsToMove)
+            {
+                contentContainer.Controls.Add(ctrl);
+            }
+            
+            scrollablePanel.Controls.Add(contentContainer);
+            
+            // Обновляем ширину contentContainer и всех rowPanel при изменении размера
+            void UpdateContentWidth()
+            {
+                if (contentContainer != null && scrollablePanel != null)
+                {
+                    int newWidth = scrollablePanel.ClientSize.Width;
+                    if (newWidth > 0)
+                    {
+                        contentContainer.Width = newWidth;
+                        // Обновляем ширину всех rowPanel
+                        foreach (Control ctrl in contentContainer.Controls)
+                        {
+                            if (ctrl is Panel p && p.Anchor.HasFlag(AnchorStyles.Right))
+                            {
+                                p.Width = newWidth;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            scrollablePanel.Resize += (s, e) => UpdateContentWidth();
+            settingsContentPanel.Resize += (s, e) => UpdateContentWidth();
+            
+            // Добавляем прокручиваемую панель в контейнер
+            settingsContentPanel.Controls.Add(scrollablePanel);
+            
+            // Инициализируем ширину после добавления
+            UpdateContentWidth();
+        }
+        
+        private void ShowMacrosSettings()
+        {
+            if (settingsContentPanel == null) return;
+            
+            settingsContentPanel.Controls.Clear();
+            settingsContentPanel.Padding = new Padding(0, 10, 0, 0); // Небольшой верхний отступ
+            
+            // Разделяем панель на две части: список макросов слева и детали справа
+            Panel leftPanel = new Panel
+            {
+                Dock = DockStyle.Left,
+                Width = 280,
+                BackColor = System.Drawing.Color.FromArgb(250, 250, 250),
+                Padding = new Padding(15, 30, 15, 15), // Отступ сверху 20 (15 + 5 пикселей)
+                Margin = new Padding(0, 5, 0, 0) // Дополнительный отступ сверху на 5 пикселей
+            };
+            
+            Panel rightPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = System.Drawing.Color.White,
+                Padding = new Padding(25),
+                AutoScroll = true
+            };
+            
+            settingsContentPanel.Controls.Add(rightPanel);
+            settingsContentPanel.Controls.Add(leftPanel);
+            
+            // Заголовок списка макросов
+            Label lblMacrosList = new Label
+            {
+                Text = "Записи:",
+                Font = new System.Drawing.Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                AutoSize = true,
+                Location = new System.Drawing.Point(10, -5),
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            leftPanel.Controls.Add(lblMacrosList);
+            
+            // Список макросов (кликабельные элементы)
+            Panel macrosListPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Location = new System.Drawing.Point(0, 30),
+                AutoScroll = true
+            };
+            
+            foreach (string macroFile in savedMacroFiles)
+            {
+                Button btnMacro = new Button
+                {
+                    Text = Path.GetFileNameWithoutExtension(macroFile),
+                    Dock = DockStyle.Top,
+                    Height = 45,
+                    Font = new System.Drawing.Font("Segoe UI", 11F),
+                    BackColor = System.Drawing.Color.White,
+                    ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                    FlatStyle = FlatStyle.Flat,
+                    FlatAppearance = { BorderSize = 0 },
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(10, 0, 0, 0),
+                    Cursor = Cursors.Hand,
+                    Tag = macroFile
+                };
+                btnMacro.Click += (s, e) => {
+                    // Подсвечиваем выбранный макрос
+                    foreach (Control ctrl in macrosListPanel.Controls)
+                    {
+                        if (ctrl is Button btn)
+                        {
+                            btn.BackColor = System.Drawing.Color.White;
+                            btn.ForeColor = System.Drawing.Color.FromArgb(66, 66, 66);
+                        }
+                    }
+                    btnMacro.BackColor = System.Drawing.Color.FromArgb(33, 150, 243);
+                    btnMacro.ForeColor = System.Drawing.Color.White;
+                    
+                    ShowMacroDetails(macroFile, rightPanel);
+                };
+                btnMacro.MouseEnter += (s, e) => {
+                    if (btnMacro.BackColor != System.Drawing.Color.FromArgb(33, 150, 243))
+                        btnMacro.BackColor = System.Drawing.Color.FromArgb(245, 245, 245);
+                };
+                btnMacro.MouseLeave += (s, e) => {
+                    if (btnMacro.BackColor != System.Drawing.Color.FromArgb(33, 150, 243))
+                        btnMacro.BackColor = System.Drawing.Color.White;
+                };
+                macrosListPanel.Controls.Add(btnMacro);
+                macrosListPanel.Controls.SetChildIndex(btnMacro, 0);
+            }
+            
+            leftPanel.Controls.Add(macrosListPanel);
+            
+            // Выбираем первый макрос если есть
+            if (savedMacroFiles.Count > 0)
+            {
+                var firstBtn = macrosListPanel.Controls[macrosListPanel.Controls.Count - 1] as Button;
+                if (firstBtn != null)
+                {
+                    firstBtn.PerformClick();
+                }
+            }
+            else
+            {
+                // Показываем сообщение, если макросов нет
+                Label lblNoMacros = new Label
+                {
+                    Text = "Нет сохраненных макросов",
+                    Font = new System.Drawing.Font("Segoe UI", 12F),
+                    ForeColor = System.Drawing.Color.FromArgb(158, 158, 158),
+                    AutoSize = true,
+                    Location = new System.Drawing.Point(25, 100)
+                };
+                rightPanel.Controls.Add(lblNoMacros);
+            }
+        }
+        
+        private List<InputEvent>? currentEditingEvents = null;
+        private string? currentEditingMacroFile = null;
+        private long? currentEditingKeyboardLayout = null;
+        private long? currentEditingDurationTicks = null;
+        private bool skipDeleteConfirmation = false; // Настройка "больше не спрашивать" для удаления
+        private bool isAppendingToMacro = false; // Флаг режима дозаписи в макрос
+        private int actionToReplaceIndex = -1; // Индекс действия для замены
+        private int mouseMovesStartIndex = -1; // Начальный индекс группы движений мыши для замены
+        private int mouseMovesCountToReplace = 0; // Количество движений мыши для замены
+        private bool isReplacingAction = false; // Флаг режима замены действия
+        private bool isReplacingMouseMoves = false; // Флаг режима замены движений мыши
+        private Panel? currentMacroDetailsPanel = null; // Панель с деталями макроса для обновления
+        
+        private void ShowMacroDetails(string? macroFileName, Panel panel)
+        {
+            if (string.IsNullOrEmpty(macroFileName) || panel == null) return;
+            
+            panel.Controls.Clear();
+            
+            string filePath = Path.Combine(macrosDirectory, macroFileName);
+            if (!File.Exists(filePath))
+            {
+                Label lblError = new Label
+                {
+                    Text = "Файл не найден",
+                    Font = new System.Drawing.Font("Segoe UI", 12F),
+                    AutoSize = true
+                };
+                panel.Controls.Add(lblError);
+                return;
+            }
+            
+            // Загружаем макрос
+            var events = recorder?.LoadFromFile(filePath);
+            if (events == null)
+            {
+                Label lblError = new Label
+                {
+                    Text = "Ошибка загрузки файла",
+                    Font = new System.Drawing.Font("Segoe UI", 12F),
+                    AutoSize = true
+                };
+                panel.Controls.Add(lblError);
+                return;
+            }
+            
+            // Сохраняем события для редактирования (создаем копию)
+            currentEditingEvents = new List<InputEvent>(events);
+            currentEditingMacroFile = macroFileName;
+            
+            // Загружаем дополнительные данные из файла
+            LoadMacroMetadata(filePath);
+            
+            // Если событий нет, создаем пустой список
+            if (currentEditingEvents.Count == 0)
+            {
+                currentEditingEvents = new List<InputEvent>();
+            }
+            
+            // Название макроса (редактируемое)
+            Label lblMacroNameLabel = new Label
+            {
+                Text = "Название макроса:",
+                Font = new System.Drawing.Font("Segoe UI", 12F, FontStyle.Bold),
+                ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                AutoSize = true,
+                Location = new System.Drawing.Point(0, 0),
+            };
+            panel.Controls.Add(lblMacroNameLabel);
+            
+            TextBox txtMacroName = new TextBox
+            {
+                Text = Path.GetFileNameWithoutExtension(macroFileName),
+                Font = new System.Drawing.Font("Segoe UI", 12F),
+                Location = new System.Drawing.Point(0, 25),
+                Size = new System.Drawing.Size(450, 35),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = System.Drawing.Color.White,
+            };
+            panel.Controls.Add(txtMacroName);
+            
+            // Кнопка удаления макроса
+            Button btnDeleteMacro = new Button
+            {
+                Text = "Удалить запись",
+                Size = new System.Drawing.Size(180, 29),
+                Location = new System.Drawing.Point(460, 25),
+                Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(244, 67, 54),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Cursor = Cursors.Hand
+            };
+            btnDeleteMacro.Click += (s, e) => {
+                DeleteMacro(macroFileName);
+            };
+            btnDeleteMacro.MouseEnter += (s, e) => {
+                btnDeleteMacro.BackColor = System.Drawing.Color.FromArgb(229, 57, 53);
+            };
+            btnDeleteMacro.MouseLeave += (s, e) => {
+                btnDeleteMacro.BackColor = System.Drawing.Color.FromArgb(244, 67, 54);
+            };
+            panel.Controls.Add(btnDeleteMacro);
+            
+            // Список действий
+            int yPos = 80;
+            Label lblActions = new Label
+            {
+                Text = "Действия:",
+                Font = new System.Drawing.Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                AutoSize = true,
+                Location = new System.Drawing.Point(0, yPos)
+            };
+            panel.Controls.Add(lblActions);
+            
+            // Кнопка "Добавить действие"
+            Button btnAddAction = new Button
+            {
+                Text = "Добавить действие",
+                Size = new System.Drawing.Size(180, 35),
+                Location = new System.Drawing.Point(150, yPos - 2),
+                Font = new System.Drawing.Font("Segoe UI", 10F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(76, 175, 80),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 },
+                Cursor = Cursors.Hand
+            };
+            btnAddAction.Click += (s, e) => {
+                StartAppendingToMacro(panel);
+            };
+            panel.Controls.Add(btnAddAction);
+            
+            yPos += 45;
+            
+            // Группируем движения мыши и нумеруем действия (используем currentEditingEvents)
+            var groupedEvents = new List<object>();
+            List<InputEvent> mouseMoveGroup = new List<InputEvent>();
+            
+            // Счетчики для нумерации каждого типа действия
+            Dictionary<string, int> actionCounters = new Dictionary<string, int>();
+            int mouseMoveGroupCounter = 0;
+            
+            for (int i = 0; i < currentEditingEvents.Count; i++)
+            {
+                if (currentEditingEvents[i].EventType == "MouseMove")
+                {
+                    mouseMoveGroup.Add(currentEditingEvents[i]);
+                }
+                else
+                {
+                    // Если накопились движения мыши, добавляем как группу
+                    if (mouseMoveGroup.Count > 0)
+                    {
+                        mouseMoveGroupCounter++;
+                        groupedEvents.Add(new { 
+                            Event = mouseMoveGroup.ToList(), 
+                            DisplayText = $"🖱️ Движения курсора №{mouseMoveGroupCounter}", 
+                            Index = i - mouseMoveGroup.Count,
+                            IsGroup = true
+                        });
+                        mouseMoveGroup.Clear();
+                    }
+                    
+                    string displayText = FormatEventForDisplayWithNumber(currentEditingEvents[i], actionCounters);
+                    groupedEvents.Add(new { 
+                        Event = currentEditingEvents[i], 
+                        DisplayText = displayText, 
+                        Index = i,
+                        IsGroup = false
+                    });
+                }
+            }
+            
+            // Добавляем оставшиеся движения мыши
+            if (mouseMoveGroup.Count > 0)
+            {
+                mouseMoveGroupCounter++;
+                groupedEvents.Add(new { 
+                    Event = mouseMoveGroup.ToList(), 
+                    DisplayText = $"🖱️ Движения курсора №{mouseMoveGroupCounter}", 
+                    Index = currentEditingEvents.Count - mouseMoveGroup.Count,
+                    IsGroup = true
+                });
+            }
+            
+            // Панель для списка действий
+            Panel actionsPanel = new Panel
+            {
+                Location = new System.Drawing.Point(0, yPos),
+                Size = new System.Drawing.Size(750, 450),
+                AutoScroll = true,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            panel.Controls.Add(actionsPanel);
+            
+            int actionYPos = 0;
+            
+            // Отображаем действия
+            foreach (var item in groupedEvents)
+            {
+                dynamic eventItem = item;
+                
+                // Контейнер для действия
+                Panel actionContainer = new Panel
+                {
+                    Location = new System.Drawing.Point(0, actionYPos),
+                    Size = new System.Drawing.Size(730, 45),
+                    BackColor = System.Drawing.Color.White
+                };
+                
+                Button btnAction = new Button
+                {
+                    Text = eventItem.DisplayText,
+                    Font = new System.Drawing.Font("Segoe UI", 11F),
+                    Location = new System.Drawing.Point(0, 0),
+                    Size = new System.Drawing.Size(600, 45),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = System.Drawing.Color.FromArgb(250, 250, 250),
+                    ForeColor = System.Drawing.Color.FromArgb(66, 66, 66),
+                    Padding = new Padding(15, 0, 0, 0),
+                    Cursor = Cursors.Hand,
+                    Tag = eventItem,
+                    Dock = DockStyle.Left
+                };
+                btnAction.Click += (s, e) => {
+                    if (eventItem.IsGroup)
+                    {
+                        EditMacroMouseMoves(eventItem.Event, btnAction);
+                    }
+                    else
+                    {
+                        EditMacroAction(eventItem.Event, btnAction);
+                    }
+                };
+                btnAction.MouseEnter += (s, e) => {
+                    btnAction.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+                };
+                btnAction.MouseLeave += (s, e) => {
+                    btnAction.BackColor = System.Drawing.Color.FromArgb(250, 250, 250);
+                };
+                
+                // Кнопка удаления - сохраняем индекс из groupedEvents для надежного удаления
+                int actionIndexInGroup = groupedEvents.IndexOf(item);
+                Button btnDelete = new Button
+                {
+                    Text = "Удалить действие",
+                    Font = new System.Drawing.Font("Segoe UI", 9F),
+                    Location = new System.Drawing.Point(605, 5),
+                    Size = new System.Drawing.Size(120, 35),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = System.Drawing.Color.FromArgb(244, 67, 54),
+                    ForeColor = System.Drawing.Color.White,
+                    FlatAppearance = { BorderSize = 0 },
+                    Cursor = Cursors.Hand,
+                    Tag = new { EventItem = eventItem, Index = actionIndexInGroup }
+                };
+                btnDelete.Click += (s, e) => {
+                    var tagData = (dynamic)btnDelete.Tag;
+                    DeleteMacroActionWithConfirmation(tagData.EventItem, panel);
+                };
+                btnDelete.MouseEnter += (s, e) => {
+                    btnDelete.BackColor = System.Drawing.Color.FromArgb(229, 57, 53);
+                };
+                btnDelete.MouseLeave += (s, e) => {
+                    btnDelete.BackColor = System.Drawing.Color.FromArgb(244, 67, 54);
+                };
+                
+                actionContainer.Controls.Add(btnDelete);
+                actionContainer.Controls.Add(btnAction);
+                actionsPanel.Controls.Add(actionContainer);
+                
+                actionYPos += 50;
+            }
+            
+            yPos += 460;
+            
+            // Кнопка сохранения
+            Button btnSaveMacro = new Button
+            {
+                Text = "💾 Сохранить изменения",
+                Size = new System.Drawing.Size(250, 40),
+                Location = new System.Drawing.Point(0, yPos + 20),
+                Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(76, 175, 80),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 }
+            };
+            btnSaveMacro.Click += (s, e) => {
+                SaveMacroChanges(macroFileName, txtMacroName.Text, panel);
+            };
+            panel.Controls.Add(btnSaveMacro);
+        }
+        
+        private void SaveMacroChanges(string oldFileName, string newName, Panel panel)
+        {
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                MessageBox.Show("Имя макроса не может быть пустым", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // Очищаем имя от недопустимых символов
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            foreach (char c in invalidChars)
+            {
+                newName = newName.Replace(c.ToString(), "");
+            }
+            newName = newName.Trim();
+            
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                MessageBox.Show("Имя макроса содержит только недопустимые символы", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            string oldFilePath = Path.Combine(macrosDirectory, oldFileName);
+            string newFileName = $"{newName}.json";
+            string newFilePath = Path.Combine(macrosDirectory, newFileName);
+            
+            try
+            {
+                // Если имя не изменилось, ничего не делаем
+                if (oldFileName == newFileName)
+                {
+                    AddLog("ℹ️ Имя макроса не изменилось");
+                    return;
+                }
+                
+                // Если файл с новым именем уже существует
+                if (File.Exists(newFilePath) && oldFileName != newFileName)
+                {
+                    var result = MessageBox.Show(
+                        $"Файл с именем '{newFileName}' уже существует. Перезаписать?",
+                        "Файл уже существует",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    
+                    if (result != DialogResult.Yes)
+                    {
+                        return;
+                    }
+                }
+                
+                // Сохраняем изменения в текущем файле или переименовываем
+                if (oldFileName != newFileName && File.Exists(oldFilePath))
+                {
+                    // Сохраняем в новый файл
+                    SaveMacroEvents(newFilePath);
+                    File.Delete(oldFilePath);
+                    
+                    // Обновляем список сохраненных файлов
+                    if (savedMacroFiles.Contains(oldFileName))
+                    {
+                        savedMacroFiles.Remove(oldFileName);
+                    }
+                    
+                    if (!savedMacroFiles.Contains(newFileName))
+                    {
+                        savedMacroFiles.Add(newFileName);
+                        savedMacroFiles.Sort();
+                    }
+                    
+                    // Обновляем текущий файл если он был выбран
+                    if (currentMacroFile == oldFileName)
+                    {
+                        currentMacroFile = newFileName;
+                    }
+                    
+                    // Обновляем ComboBox
+                    UpdateMacroFilesComboBox();
+                    
+                    AddLog($"✏️ Макрос переименован: {oldFileName} → {newFileName}");
+                }
+                else
+                {
+                    // Просто сохраняем изменения в текущем файле
+                    SaveMacroEvents(oldFilePath);
+                    AddLog($"💾 Изменения макроса сохранены");
+                }
+                
+                // Обновляем интерфейс настроек макросов
+                ShowMacrosSettings();
+                
+                MessageBox.Show(oldFileName == newFileName ? "Изменения макроса сохранены" : "Макрос успешно переименован и сохранен", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при переименовании макроса: {ex.Message}");
+                MessageBox.Show($"Ошибка при переименовании: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private string FormatEventForDisplay(InputEvent evt)
+        {
+            switch (evt.EventType)
+            {
+                case "KeyPress":
+                    string keyName = GetKeyDisplayName(evt.KeyCode);
+                    return evt.IsPressed ? $"⌨️ Нажатие клавиши: {keyName}" : $"⌨️ Отпускание клавиши: {keyName}";
+                case "MouseClick":
+                    string button = evt.MouseButton == 1 ? "ЛКМ" : evt.MouseButton == 2 ? "ПКМ" : "СКМ";
+                    return evt.IsPressed ? $"🖱️ Нажатие {button} ({evt.X}, {evt.Y})" : $"🖱️ Отпускание {button} ({evt.X}, {evt.Y})";
+                case "MouseMove":
+                    return $"🖱️ Движения курсора";
+                default:
+                    return evt.EventType;
+            }
+        }
+        
+        private string FormatEventForDisplayWithNumber(InputEvent evt, Dictionary<string, int> counters)
+        {
+            switch (evt.EventType)
+            {
+                case "KeyPress":
+                    string keyName = GetKeyDisplayName(evt.KeyCode);
+                    string keyCounterKey = $"KeyPress_{keyName}";
+                    if (!counters.ContainsKey(keyCounterKey))
+                        counters[keyCounterKey] = 0;
+                    counters[keyCounterKey]++;
+                    return $"⌨️ Нажатие клавиши {keyName} №{counters[keyCounterKey]}";
+                case "MouseClick":
+                    string button = evt.MouseButton == 1 ? "ЛКМ" : evt.MouseButton == 2 ? "ПКМ" : "СКМ";
+                    string clickCounterKey = $"MouseClick_{button}";
+                    if (!counters.ContainsKey(clickCounterKey))
+                        counters[clickCounterKey] = 0;
+                    counters[clickCounterKey]++;
+                    return $"🖱️ Нажатие {button} №{counters[clickCounterKey]}";
+                case "MouseMove":
+                    // Этот случай обрабатывается отдельно для групп
+                    return $"🖱️ Движения курсора";
+                default:
+                    return evt.EventType;
+            }
+        }
+        
+        private string GetKeyDisplayName(int keyCode)
+        {
+            // Полная функция для отображения имени клавиши
+            if (keyCode >= 0x30 && keyCode <= 0x39) return ((char)keyCode).ToString(); // Цифры
+            if (keyCode >= 0x41 && keyCode <= 0x5A) return ((char)keyCode).ToString(); // Буквы
+            
+            return keyCode switch
+            {
+                0x08 => "Backspace",
+                0x09 => "Tab",
+                0x0D => "Enter",
+                0x20 => "Space",
+                0x1B => "Escape",
+                0x2E => "Delete",
+                0x25 => "←",
+                0x26 => "↑",
+                0x27 => "→",
+                0x28 => "↓",
+                0x21 => "PageUp",
+                0x22 => "PageDown",
+                0x23 => "End",
+                0x24 => "Home",
+                0x2C => "PrintScreen",
+                0x2D => "Insert",
+                0x14 => "CapsLock",
+                0x70 => "F1", 0x71 => "F2", 0x72 => "F3", 0x73 => "F4",
+                0x74 => "F5", 0x75 => "F6", 0x76 => "F7", 0x77 => "F8",
+                0x78 => "F9", 0x79 => "F10", 0x7A => "F11", 0x7B => "F12",
+                0xA0 => "Shift", 0xA1 => "Shift",
+                0xA2 => "Ctrl", 0xA3 => "Ctrl",
+                0xA4 => "Alt", 0xA5 => "Alt",
+                0xBC => ",", 0xBD => "-", 0xBE => ".", 0xBF => "/",
+                0xBA => ";", 0xBB => "=", 0xDB => "[", 0xDC => "\\",
+                0xDD => "]", 0xDE => "'", 0xC0 => "`",
+                0x13 => "Pause",
+                _ => $"Key(0x{keyCode:X2})"
+            };
+        }
+        
+        private void EditMacroAction(InputEvent evt, Button btn)
+        {
+            if (currentEditingEvents == null || currentEditingMacroFile == null) return;
+            
+            // Находим индекс действия в списке
+            int actionIndex = -1;
+            for (int i = 0; i < currentEditingEvents.Count; i++)
+            {
+                var currentEvt = currentEditingEvents[i];
+                if (currentEvt.EventType == evt.EventType &&
+                    currentEvt.Timestamp == evt.Timestamp &&
+                    (evt.EventType == "KeyPress" ? currentEvt.KeyCode == evt.KeyCode : true) &&
+                    (evt.EventType == "MouseClick" || evt.EventType == "MouseMove" 
+                        ? currentEvt.X == evt.X && currentEvt.Y == evt.Y && currentEvt.MouseButton == evt.MouseButton 
+                        : true))
+                {
+                    actionIndex = i;
+                    break;
+                }
+            }
+            
+            if (actionIndex < 0)
+            {
+                MessageBox.Show("Не удалось найти действие для редактирования", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // Информационное окно о замене через запись
+            Form infoDialog = new Form
+            {
+                Text = "Замена действия",
+                Size = new System.Drawing.Size(550, 200),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            string stopRecordKey = GetHotkeyName(HOTKEY_STOP_RECORD, Keys.F10);
+            string stopPlayKey = GetHotkeyName(HOTKEY_STOP_PLAY, (Keys)0xC0);
+            
+            Label lblInfo = new Label
+            {
+                Text = $"Когда это окно закроется, запишите новое действие для замены текущего.\n\n" +
+                       $"Для отмены замены нажмите горячую клавишу остановки воспроизведения ({stopPlayKey}).\n" +
+                       $"Для сохранения нового действия нажмите горячую клавишу сохранения записи ({stopRecordKey}).\n\n" +
+                       $"Окно закроется автоматически через 3 секунды...",
+                Location = new System.Drawing.Point(20, 20),
+                Size = new System.Drawing.Size(510, 130),
+                AutoSize = false
+            };
+            infoDialog.Controls.Add(lblInfo);
+            
+            // Таймер для автозакрытия через 3 секунды
+            System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 3000,
+                Enabled = true
+            };
+            
+            closeTimer.Tick += (s, e) => {
+                closeTimer.Stop();
+                closeTimer.Dispose();
+                infoDialog.DialogResult = DialogResult.OK;
+                infoDialog.Close();
+            };
+            
+            infoDialog.ShowDialog();
+            
+            // Устанавливаем флаг замены и индекс
+            isReplacingAction = true;
+            actionToReplaceIndex = actionIndex;
+            
+            AddLog($"🔄 Начата замена действия. Нажмите горячую клавишу для остановки.");
+            
+            // Запускаем запись
+            StartRecording();
+            
+            // Закрываем панель настроек и возвращаемся на главный экран для записи
+            HideSettingsPanel();
+        }
+        
+        private void LoadMacroMetadata(string filePath)
+        {
+            try
+            {
+                string json = File.ReadAllText(filePath);
+                var macroData = System.Text.Json.JsonSerializer.Deserialize<MacroData>(json, new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                });
+                
+                if (macroData != null)
+                {
+                    currentEditingKeyboardLayout = macroData.KeyboardLayout;
+                    currentEditingDurationTicks = macroData.DurationTicks;
+                }
+            }
+            catch
+            {
+                // Если не удалось загрузить метаданные, оставляем null
+                currentEditingKeyboardLayout = null;
+                currentEditingDurationTicks = null;
+            }
+        }
+        
+        private void DeleteMacro(string macroFileName)
+        {
+            if (string.IsNullOrEmpty(macroFileName)) return;
+            
+            // Подтверждение удаления
+            var result = MessageBox.Show(
+                $"Вы уверены, что хотите удалить запись \"{Path.GetFileNameWithoutExtension(macroFileName)}\"?\n\nЗапись будет удалена безвозвратно.",
+                "Подтверждение удаления",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            
+            if (result != DialogResult.Yes) return;
+            
+            try
+            {
+                string filePath = Path.Combine(macrosDirectory, macroFileName);
+                
+                // Удаляем файл
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    AddLog($"🗑️ Запись удалена: {macroFileName}");
+                }
+                
+                // Удаляем из списка
+                if (savedMacroFiles.Contains(macroFileName))
+                {
+                    savedMacroFiles.Remove(macroFileName);
+                }
+                
+                // Если это текущий макрос - очищаем
+                if (currentMacroFile == macroFileName)
+                {
+                    currentMacroFile = "";
+                }
+                
+                if (currentEditingMacroFile == macroFileName)
+                {
+                    currentEditingMacroFile = null;
+                    currentEditingEvents = null;
+                    currentMacroDetailsPanel = null;
+                }
+                
+                // Обновляем ComboBox
+                UpdateMacroFilesComboBox();
+                
+                // Обновляем интерфейс настроек макросов
+                ShowMacrosSettings();
+                
+                MessageBox.Show("Запись успешно удалена", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при удалении записи: {ex.Message}");
+                MessageBox.Show($"Ошибка при удалении записи: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void SaveMacroEvents(string filePath)
+        {
+            if (currentEditingEvents == null) return;
+            
+            try
+            {
+                var macroData = new MacroData
+                {
+                    Events = currentEditingEvents,
+                    KeyboardLayout = currentEditingKeyboardLayout,
+                    DurationTicks = currentEditingDurationTicks
+                };
+
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                };
+                
+                string json = System.Text.Json.JsonSerializer.Serialize(macroData, options);
+                File.WriteAllText(filePath, json);
+                
+                AddLog($"💾 Макрос сохранен: {Path.GetFileName(filePath)} ({currentEditingEvents.Count} событий)");
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при сохранении событий: {ex.Message}");
+                throw;
+            }
+        }
+        
+        private void AddNewMacroAction(Panel panel)
+        {
+            // Диалог выбора типа действия
+            Form actionDialog = new Form
+            {
+                Text = "Добавить действие",
+                Size = new System.Drawing.Size(400, 250),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblType = new Label
+            {
+                Text = "Тип действия:",
+                Location = new System.Drawing.Point(20, 20),
+                AutoSize = true
+            };
+            actionDialog.Controls.Add(lblType);
+            
+            ComboBox cmbActionType = new ComboBox
+            {
+                Location = new System.Drawing.Point(20, 45),
+                Size = new System.Drawing.Size(340, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
+            cmbActionType.Items.AddRange(new[] { "Нажатие клавиши", "Нажатие мыши (ЛКМ)", "Нажатие мыши (ПКМ)", "Нажатие мыши (СКМ)", "Движение мыши" });
+            cmbActionType.SelectedIndex = 0;
+            actionDialog.Controls.Add(cmbActionType);
+            
+            Button btnOK = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new System.Drawing.Point(180, 150),
+                Size = new System.Drawing.Size(80, 30)
+            };
+            actionDialog.Controls.Add(btnOK);
+            
+            Button btnCancel = new Button
+            {
+                Text = "Отмена",
+                DialogResult = DialogResult.Cancel,
+                Location = new System.Drawing.Point(280, 150),
+                Size = new System.Drawing.Size(80, 30)
+            };
+            actionDialog.Controls.Add(btnCancel);
+            actionDialog.CancelButton = btnCancel;
+            actionDialog.AcceptButton = btnOK;
+            
+            if (actionDialog.ShowDialog() == DialogResult.OK)
+            {
+                InputEvent? newEvent = null;
+                
+                switch (cmbActionType.SelectedIndex)
+                {
+                    case 0: // Нажатие клавиши
+                        newEvent = CreateKeyPressEvent();
+                        break;
+                    case 1: // ЛКМ
+                        newEvent = CreateMouseClickEvent(1);
+                        break;
+                    case 2: // ПКМ
+                        newEvent = CreateMouseClickEvent(2);
+                        break;
+                    case 3: // СКМ
+                        newEvent = CreateMouseClickEvent(3);
+                        break;
+                    case 4: // Движение мыши
+                        newEvent = CreateMouseMoveEvent();
+                        break;
+                }
+                
+                if (newEvent != null && currentEditingEvents != null)
+                {
+                    // Добавляем событие в конец списка
+                    long maxTimestamp = currentEditingEvents.Count > 0 
+                        ? currentEditingEvents.Max(e => e.Timestamp) 
+                        : 0;
+                    newEvent.Timestamp = maxTimestamp + 10000000; // +1 секунда
+                    currentEditingEvents.Add(newEvent);
+                    
+                    // Перерисовываем панель
+                    ShowMacroDetails(currentEditingMacroFile, panel);
+                    AddLog($"➕ Добавлено новое действие");
+                }
+            }
+        }
+        
+        private InputEvent? CreateKeyPressEvent()
+        {
+            Form keyDialog = new Form
+            {
+                Text = "Выберите клавишу",
+                Size = new System.Drawing.Size(350, 120),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblInfo = new Label
+            {
+                Text = "Нажмите клавишу:",
+                Location = new System.Drawing.Point(20, 20),
+                AutoSize = true
+            };
+            keyDialog.Controls.Add(lblInfo);
+            
+            TextBox txtKey = new TextBox
+            {
+                Location = new System.Drawing.Point(20, 45),
+                Size = new System.Drawing.Size(290, 25),
+                ReadOnly = true,
+                Text = "Нажмите клавишу..."
+            };
+            keyDialog.Controls.Add(txtKey);
+            
+            int? selectedKeyCode = null;
+            
+            keyDialog.KeyDown += (s, e) => {
+                selectedKeyCode = (int)e.KeyCode;
+                txtKey.Text = e.KeyCode.ToString();
+                e.Handled = true;
+            };
+            
+            Button btnOK = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new System.Drawing.Point(180, 75),
+                Size = new System.Drawing.Size(60, 30)
+            };
+            keyDialog.Controls.Add(btnOK);
+            keyDialog.AcceptButton = btnOK;
+            
+            if (keyDialog.ShowDialog() == DialogResult.OK && selectedKeyCode.HasValue)
+            {
+                return new InputEvent
+                {
+                    EventType = "KeyPress",
+                    KeyCode = selectedKeyCode.Value,
+                    IsPressed = true,
+                    Timestamp = 0 // Будет установлено позже
+                };
+            }
+            
+            return null;
+        }
+        
+        private InputEvent? CreateMouseClickEvent(int button)
+        {
+            Form posDialog = new Form
+            {
+                Text = "Координаты клика",
+                Size = new System.Drawing.Size(350, 150),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblX = new Label { Text = "X:", Location = new System.Drawing.Point(20, 20), AutoSize = true };
+            TextBox txtX = new TextBox { Location = new System.Drawing.Point(50, 17), Size = new System.Drawing.Size(100, 25), Text = "0" };
+            Label lblY = new Label { Text = "Y:", Location = new System.Drawing.Point(170, 20), AutoSize = true };
+            TextBox txtY = new TextBox { Location = new System.Drawing.Point(200, 17), Size = new System.Drawing.Size(100, 25), Text = "0" };
+            
+            posDialog.Controls.AddRange(new Control[] { lblX, txtX, lblY, txtY });
+            
+            Button btnOK = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new System.Drawing.Point(180, 70),
+                Size = new System.Drawing.Size(60, 30)
+            };
+            posDialog.Controls.Add(btnOK);
+            posDialog.AcceptButton = btnOK;
+            
+            if (posDialog.ShowDialog() == DialogResult.OK &&
+                int.TryParse(txtX.Text, out int x) &&
+                int.TryParse(txtY.Text, out int y))
+            {
+                return new InputEvent
+                {
+                    EventType = "MouseClick",
+                    MouseButton = button,
+                    X = x,
+                    Y = y,
+                    IsPressed = true,
+                    Timestamp = 0
+                };
+            }
+            
+            return null;
+        }
+        
+        private InputEvent? CreateMouseMoveEvent()
+        {
+            Form posDialog = new Form
+            {
+                Text = "Координаты движения",
+                Size = new System.Drawing.Size(350, 150),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblX = new Label { Text = "X:", Location = new System.Drawing.Point(20, 20), AutoSize = true };
+            TextBox txtX = new TextBox { Location = new System.Drawing.Point(50, 17), Size = new System.Drawing.Size(100, 25), Text = "0" };
+            Label lblY = new Label { Text = "Y:", Location = new System.Drawing.Point(170, 20), AutoSize = true };
+            TextBox txtY = new TextBox { Location = new System.Drawing.Point(200, 17), Size = new System.Drawing.Size(100, 25), Text = "0" };
+            
+            posDialog.Controls.AddRange(new Control[] { lblX, txtX, lblY, txtY });
+            
+            Button btnOK = new Button
+            {
+                Text = "OK",
+                DialogResult = DialogResult.OK,
+                Location = new System.Drawing.Point(180, 70),
+                Size = new System.Drawing.Size(60, 30)
+            };
+            posDialog.Controls.Add(btnOK);
+            posDialog.AcceptButton = btnOK;
+            
+            if (posDialog.ShowDialog() == DialogResult.OK &&
+                int.TryParse(txtX.Text, out int x) &&
+                int.TryParse(txtY.Text, out int y))
+            {
+                return new InputEvent
+                {
+                    EventType = "MouseMove",
+                    X = x,
+                    Y = y,
+                    Timestamp = 0
+                };
+            }
+            
+            return null;
+        }
+        
+        private void DeleteMacroActionWithConfirmation(dynamic eventItem, Panel panel)
+        {
+            if (currentEditingEvents == null) return;
+            
+            // Если пользователь выбрал "больше не спрашивать", пропускаем подтверждение
+            if (skipDeleteConfirmation)
+            {
+                DeleteMacroAction(eventItem, panel);
+                return;
+            }
+            
+            // Создаем форму подтверждения
+            Form confirmDialog = new Form
+            {
+                Text = "Подтверждение удаления",
+                Size = new System.Drawing.Size(450, 180),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblMessage = new Label
+            {
+                Text = "Вы уверены, что хотите удалить это действие из записи? Действие удалится безвозвратно.",
+                Location = new System.Drawing.Point(20, 20),
+                Size = new System.Drawing.Size(400, 50),
+                AutoSize = false
+            };
+            confirmDialog.Controls.Add(lblMessage);
+            
+            CheckBox chkDontAsk = new CheckBox
+            {
+                Text = "Больше не спрашивать",
+                Location = new System.Drawing.Point(20, 80),
+                AutoSize = true
+            };
+            confirmDialog.Controls.Add(chkDontAsk);
+            
+            Button btnYes = new Button
+            {
+                Text = "Да",
+                DialogResult = DialogResult.Yes,
+                Location = new System.Drawing.Point(250, 110),
+                Size = new System.Drawing.Size(80, 30)
+            };
+            confirmDialog.Controls.Add(btnYes);
+            
+            Button btnNo = new Button
+            {
+                Text = "Нет",
+                DialogResult = DialogResult.No,
+                Location = new System.Drawing.Point(340, 110),
+                Size = new System.Drawing.Size(80, 30)
+            };
+            confirmDialog.Controls.Add(btnNo);
+            confirmDialog.CancelButton = btnNo;
+            confirmDialog.AcceptButton = btnYes;
+            
+            var result = confirmDialog.ShowDialog();
+            
+            if (chkDontAsk.Checked && result == DialogResult.Yes)
+            {
+                skipDeleteConfirmation = true;
+                SaveSettings();
+            }
+            
+            if (result == DialogResult.Yes)
+            {
+                DeleteMacroAction(eventItem, panel);
+            }
+        }
+        
+        private void SaveSettings()
+        {
+            try
+            {
+                var settings = new Dictionary<string, object>
+                {
+                    ["SkipDeleteConfirmation"] = skipDeleteConfirmation
+                };
+                
+                string json = System.Text.Json.JsonSerializer.Serialize(settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                string settingsPath = Path.Combine(Application.StartupPath, "settings.json");
+                File.WriteAllText(settingsPath, json);
+            }
+            catch
+            {
+                // Игнорируем ошибки сохранения настроек
+            }
+        }
+        
+        private void StartAppendingToMacro(Panel panel)
+        {
+            if (currentEditingMacroFile == null || currentEditingEvents == null)
+            {
+                MessageBox.Show("Не выбран макрос для редактирования", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // Получаем названия горячих клавиш
+            string stopPlayKey = GetHotkeyName(HOTKEY_STOP_PLAY, (Keys)0xC0); // Backquote - для отмены
+            string stopRecordKey = GetHotkeyName(HOTKEY_STOP_RECORD, Keys.F10); // F10 - для сохранения
+            
+            // Создаем информационное окно
+            Form infoDialog = new Form
+            {
+                Text = "Добавление действий",
+                Size = new System.Drawing.Size(600, 220),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblInfo = new Label
+            {
+                Text = $"Когда это окно закроется, запишите нужные вам действия.\n\n" +
+                       $"Для отмены записи нажмите горячую клавишу остановки воспроизведения ({stopPlayKey}).\n" +
+                       $"Для сохранения записи нажмите горячую клавишу сохранения записи ({stopRecordKey}).\n\n" +
+                       $"Окно закроется автоматически через 3 секунды...",
+                Location = new System.Drawing.Point(20, 20),
+                Size = new System.Drawing.Size(550, 140),
+                AutoSize = false
+            };
+            infoDialog.Controls.Add(lblInfo);
+            
+            // Таймер для автозакрытия через 3 секунды
+            System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 3000,
+                Enabled = true
+            };
+            
+            closeTimer.Tick += (s, e) => {
+                closeTimer.Stop();
+                closeTimer.Dispose();
+                infoDialog.DialogResult = DialogResult.OK;
+                infoDialog.Close();
+            };
+            
+            infoDialog.ShowDialog();
+            
+            // Если окно закрылось (через таймер или кнопку OK), начинаем запись
+            isAppendingToMacro = true;
+            AddLog("➕ Начата дозапись в макрос. Нажмите горячую клавишу для остановки.");
+            
+            // Запускаем запись
+            StartRecording();
+            
+            // Закрываем панель настроек и возвращаемся на главный экран для записи
+            HideSettingsPanel();
+        }
+        
+        private string GetHotkeyName(int hotkeyId, Keys defaultKey)
+        {
+            if (savedHotkeys.ContainsKey(hotkeyId))
+            {
+                uint mod = savedHotkeyModifiers.ContainsKey(hotkeyId) ? savedHotkeyModifiers[hotkeyId] : 0;
+                return FormatKeysToString(savedHotkeys[hotkeyId], mod);
+            }
+            return FormatKeysToString(defaultKey, 0);
+        }
+        
+        private void DeleteMacroAction(dynamic eventItem, Panel panel)
+        {
+            if (currentEditingEvents == null || currentEditingMacroFile == null) return;
+            
+            try
+            {
+                // Используем более надежный способ удаления - находим событие по точному совпадению
+                if (eventItem.IsGroup)
+                {
+                    // Удаляем группу движений мыши - находим по первому событию
+                    var mouseMoves = (List<InputEvent>)eventItem.Event;
+                    if (mouseMoves == null || mouseMoves.Count == 0) return;
+                    
+                    var firstMove = mouseMoves[0];
+                    int startIndex = -1;
+                    
+                    // Находим начальный индекс группы движений мыши
+                    for (int i = 0; i < currentEditingEvents.Count; i++)
+                    {
+                        var evt = currentEditingEvents[i];
+                        if (evt.EventType == "MouseMove" &&
+                            evt.X == firstMove.X &&
+                            evt.Y == firstMove.Y &&
+                            Math.Abs(evt.Timestamp - firstMove.Timestamp) < 1000000) // Допуск для timestamp
+                        {
+                            startIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (startIndex >= 0)
+                    {
+                        // Удаляем все MouseMove события подряд, начиная с startIndex
+                        int removed = 0;
+                        for (int i = startIndex; i < currentEditingEvents.Count && removed < mouseMoves.Count;)
+                        {
+                            if (currentEditingEvents[i].EventType == "MouseMove")
+                            {
+                                currentEditingEvents.RemoveAt(i);
+                                removed++;
+                            }
+                            else
+                            {
+                                i++;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Удаляем одно событие - находим его в списке с допуском для timestamp
+                    var evt = (InputEvent)eventItem.Event;
+                    for (int i = currentEditingEvents.Count - 1; i >= 0; i--)
+                    {
+                        var currentEvt = currentEditingEvents[i];
+                        bool matches = false;
+                        
+                        if (currentEvt.EventType == evt.EventType)
+                        {
+                            if (evt.EventType == "KeyPress")
+                            {
+                                matches = currentEvt.KeyCode == evt.KeyCode;
+                            }
+                            else if (evt.EventType == "MouseClick")
+                            {
+                                matches = currentEvt.X == evt.X && 
+                                         currentEvt.Y == evt.Y && 
+                                         currentEvt.MouseButton == evt.MouseButton;
+                            }
+                            else if (evt.EventType == "MouseMove")
+                            {
+                                matches = currentEvt.X == evt.X && currentEvt.Y == evt.Y;
+                            }
+                        }
+                        
+                        if (matches)
+                        {
+                            currentEditingEvents.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+                
+                AddLog($"🗑️ Действие удалено");
+                
+                // Сохраняем изменения
+                string filePath = Path.Combine(macrosDirectory, currentEditingMacroFile);
+                SaveMacroEvents(filePath);
+                
+                // Перерисовываем панель
+                RefreshMacroDetailsPanel();
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при удалении действия: {ex.Message}");
+                MessageBox.Show($"Ошибка при удалении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        
+        private void EditMacroMouseMoves(List<InputEvent> mouseMoves, Button btn)
+        {
+            if (currentEditingEvents == null || currentEditingMacroFile == null) return;
+            
+            // Находим начальный индекс группы движений мыши
+            int startIndex = -1;
+            if (mouseMoves.Count > 0)
+            {
+                var firstMove = mouseMoves[0];
+                for (int i = 0; i < currentEditingEvents.Count; i++)
+                {
+                    var evt = currentEditingEvents[i];
+                    if (evt.EventType == "MouseMove" &&
+                        evt.X == firstMove.X &&
+                        evt.Y == firstMove.Y &&
+                        evt.Timestamp == firstMove.Timestamp)
+                    {
+                        startIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (startIndex < 0)
+            {
+                MessageBox.Show("Не удалось найти группу движений для редактирования", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // Информационное окно о замене через запись
+            Form infoDialog = new Form
+            {
+                Text = "Замена движений мыши",
+                Size = new System.Drawing.Size(550, 200),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            string stopRecordKey = GetHotkeyName(HOTKEY_STOP_RECORD, Keys.F10);
+            string stopPlayKey = GetHotkeyName(HOTKEY_STOP_PLAY, (Keys)0xC0);
+            
+            Label lblInfo = new Label
+            {
+                Text = $"Когда это окно закроется, запишите новые движения мыши для замены текущих.\n\n" +
+                       $"Для отмены замены нажмите горячую клавишу остановки воспроизведения ({stopPlayKey}).\n" +
+                       $"Для сохранения новых движений нажмите горячую клавишу сохранения записи ({stopRecordKey}).\n\n" +
+                       $"Окно закроется автоматически через 3 секунды...",
+                Location = new System.Drawing.Point(20, 20),
+                Size = new System.Drawing.Size(510, 130),
+                AutoSize = false
+            };
+            infoDialog.Controls.Add(lblInfo);
+            
+            // Таймер для автозакрытия через 3 секунды
+            System.Windows.Forms.Timer closeTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 3000,
+                Enabled = true
+            };
+            
+            closeTimer.Tick += (s, e) => {
+                closeTimer.Stop();
+                closeTimer.Dispose();
+                infoDialog.DialogResult = DialogResult.OK;
+                infoDialog.Close();
+            };
+            
+            infoDialog.ShowDialog();
+            
+            // Устанавливаем флаг замены и индекс
+            isReplacingMouseMoves = true;
+            mouseMovesStartIndex = startIndex;
+            
+            AddLog($"🔄 Начата замена движений мыши. Нажмите горячую клавишу для остановки.");
+            
+            // Запускаем запись
+            StartRecording();
+            
+            // Закрываем панель настроек и возвращаемся на главный экран для записи
+            HideSettingsPanel();
+        }
+        
+        private void EditMacroMouseMoves_OLD(List<InputEvent> mouseMoves, Button btn)
+        {
+            // Диалог редактирования движений мыши
+            Form editDialog = new Form
+            {
+                Text = "Редактирование движений курсора",
+                Size = new System.Drawing.Size(600, 500),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+            
+            Label lblInfo = new Label
+            {
+                Text = "Координаты движений курсора (по одному на строку, формат: X,Y):",
+                Location = new System.Drawing.Point(20, 20),
+                AutoSize = true,
+                Font = new System.Drawing.Font("Segoe UI", 10F)
+            };
+            editDialog.Controls.Add(lblInfo);
+            
+            TextBox txtCoords = new TextBox
+            {
+                Location = new System.Drawing.Point(20, 50),
+                Size = new System.Drawing.Size(540, 350),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new System.Drawing.Font("Consolas", 9F),
+                Text = string.Join("\r\n", mouseMoves.Select(m => $"{m.X},{m.Y}"))
+            };
+            editDialog.Controls.Add(txtCoords);
+            
+            Button btnSave = new Button
+            {
+                Text = "Сохранить",
+                Location = new System.Drawing.Point(410, 410),
+                Size = new System.Drawing.Size(150, 35),
+                Font = new System.Drawing.Font("Segoe UI", 11F, FontStyle.Bold),
+                BackColor = System.Drawing.Color.FromArgb(33, 150, 243),
+                ForeColor = System.Drawing.Color.White,
+                FlatStyle = FlatStyle.Flat,
+                FlatAppearance = { BorderSize = 0 }
+            };
+            btnSave.Click += (s, e) => {
+                try
+                {
+                    var lines = txtCoords.Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (lines.Length != mouseMoves.Count)
+                    {
+                        MessageBox.Show($"Количество координат должно быть {mouseMoves.Count}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    
+                    for (int i = 0; i < lines.Length && i < mouseMoves.Count; i++)
+                    {
+                        var parts = lines[i].Split(',');
+                        if (parts.Length == 2 && 
+                            int.TryParse(parts[0].Trim(), out int x) && 
+                            int.TryParse(parts[1].Trim(), out int y))
+                        {
+                            mouseMoves[i].X = x;
+                            mouseMoves[i].Y = y;
+                        }
+                    }
+                    
+                    AddLog($"✏️ Изменены координаты движений курсора ({mouseMoves.Count} точек)");
+                    editDialog.Close();
+                }
+                catch
+                {
+                    MessageBox.Show("Ошибка при обработке координат", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            editDialog.Controls.Add(btnSave);
+            
+            editDialog.ShowDialog();
+        }
+        
+        private Button? waitingForHotkeyButton = null;
+        private int? waitingForHotkeyId = null;
+        
+        private void ChangeHotkey(Button btn, int hotkeyId)
+        {
+            btn.Text = "Нажмите клавишу...";
+            btn.BackColor = System.Drawing.Color.FromArgb(255, 235, 59);
+            
+            // Устанавливаем флаг ожидания нажатия клавиши
+            waitingForHotkeyButton = btn;
+            waitingForHotkeyId = hotkeyId;
+            
+            // Форма должна быть в фокусе для захвата клавиш
+            this.Focus();
+            this.KeyPreview = true;
+            
+            AddLog($"⌨️ Ожидание нажатия клавиши для: {GetHotkeyActionName(hotkeyId)}");
+        }
+        
+        private string GetHotkeyActionName(int hotkeyId)
+        {
+            return hotkeyId switch
+            {
+                HOTKEY_START_RECORD => "Начать запись",
+                HOTKEY_STOP_RECORD => "Сохранить запись",
+                HOTKEY_PLAY => "Воспроизвести",
+                HOTKEY_PLAY_LOOP => "Воспроизвести в цикле",
+                HOTKEY_PAUSE_RECORD => "Пауза записи",
+                HOTKEY_PAUSE_PLAYBACK => "Пауза воспроизведения",
+                HOTKEY_STOP_PLAY => "Остановить воспроизведение",
+                _ => "Неизвестное действие"
+            };
+        }
+        
+        
+        private string FormatKeysToString(Keys keyData, uint modifier = 0)
+        {
+            string result = "";
+            
+            // Проверяем модификаторы из параметра или из keyData
+            if (modifier == 0x0002 || (keyData & Keys.Control) == Keys.Control)
+                result += "Ctrl+";
+            if (modifier == 0x0001 || (keyData & Keys.Alt) == Keys.Alt)
+                result += "Alt+";
+            if ((keyData & Keys.Shift) == Keys.Shift)
+                result += "Shift+";
+            
+            Keys key = keyData & ~Keys.Modifiers;
+            
+            // Преобразуем клавишу в строку
+            if (key >= Keys.F1 && key <= Keys.F12)
+            {
+                result += key.ToString();
+            }
+            else if (key == Keys.Pause)
+            {
+                result += "Pause";
+            }
+            else if (key == Keys.Home)
+            {
+                result += "Home";
+            }
+            else if (key == Keys.Oemtilde || key == Keys.Oem3 || (int)key == 0xC0)
+            {
+                result += "`";
+            }
+            else
+            {
+                string keyStr = key.ToString();
+                // Убираем префикс "D" для цифровых клавиш
+                if (keyStr.StartsWith("D") && keyStr.Length == 2 && char.IsDigit(keyStr[1]))
+                {
+                    result += keyStr[1];
+                }
+                else
+                {
+                    result += keyStr;
+                }
+            }
+            
+            return result;
+        }
+        
+        private uint GetModifierFromKeys(Keys keyData)
+        {
+            uint mod = MOD_NONE;
+            if ((keyData & Keys.Control) == Keys.Control)
+                mod = 0x0002; // MOD_CONTROL
+            else if ((keyData & Keys.Alt) == Keys.Alt)
+                mod = 0x0001; // MOD_ALT
+            return mod;
+        }
+        
+        private Keys GetKeyWithoutModifiers(Keys keyData)
+        {
+            return keyData & ~Keys.Modifiers;
+        }
+        
+        private void ResetHotkeysToDefault()
+        {
+            var result = MessageBox.Show(
+                "Вы уверены, что хотите вернуть все горячие клавиши к настройкам по умолчанию?",
+                "Подтверждение",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+                
+            if (result == DialogResult.Yes)
+            {
+                // Очищаем сохраненные горячие клавиши
+                savedHotkeys.Clear();
+                savedHotkeyModifiers.Clear();
+                
+                UnregisterGlobalHotkeys();
+                RegisterGlobalHotkeys();
+                AddLog("🔄 Горячие клавиши сброшены к настройкам по умолчанию");
+                ShowHotkeysSettings(); // Обновляем UI
+            }
         }
         
         private void btnLoadMacroFile_Click(object sender, EventArgs e)
