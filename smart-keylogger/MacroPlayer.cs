@@ -508,27 +508,17 @@ public class MacroPlayer
         _isPaused = false;
         _playbackStarted = false;
         _pauseWaitHandle.Set();
-        ReleaseAllKeys();
         _internalCancellation?.Cancel();
+        
+        // Запускаем ReleaseAllKeys асинхронно, чтобы не блокировать остановку
+        Task.Run(() => ReleaseAllKeys());
+        
         Log("⏹ Воспроизведение остановлено");
     }
     
     private void ReleaseAllKeys()
     {
-        // Отжимаем все клавиши от 0x01 до 0xFE
-        for (int keyCode = 0x01; keyCode <= 0xFE; keyCode++)
-        {
-            try
-            {
-                WinAPI.keybd_event((byte)keyCode, 0, WinAPI.KEYEVENTF_KEYUP, 0);
-            }
-            catch
-            {
-                // Игнорируем ошибки
-            }
-        }
-        
-        // Отжимаем кнопки мыши
+        // Отжимаем кнопки мыши сразу
         try
         {
             WinAPI.mouse_event(WinAPI.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
@@ -537,6 +527,35 @@ public class MacroPlayer
         catch
         {
             // Игнорируем ошибки
+        }
+        
+        // Отжимаем только часто используемые клавиши для ускорения
+        // Основные клавиши модификаторов
+        byte[] importantKeys = new byte[] 
+        {
+            0x10, // Shift
+            0x11, // Ctrl
+            0x12, // Alt
+            0x5B, // Left Win
+            0x5C, // Right Win
+            0xA0, // Left Shift
+            0xA1, // Right Shift
+            0xA2, // Left Ctrl
+            0xA3, // Right Ctrl
+            0xA4, // Left Alt
+            0xA5  // Right Alt
+        };
+        
+        foreach (byte keyCode in importantKeys)
+        {
+            try
+            {
+                WinAPI.keybd_event(keyCode, 0, WinAPI.KEYEVENTF_KEYUP, 0);
+            }
+            catch
+            {
+                // Игнорируем ошибки
+            }
         }
     }
 }

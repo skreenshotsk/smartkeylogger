@@ -20,6 +20,12 @@ namespace MacroRecorderGUI
         
         private System.Windows.Forms.Timer? recordingTimer;
         private System.Windows.Forms.Timer? playbackTimer;
+        private System.Windows.Forms.Timer? scheduleTimer; // Таймер для проверки запланированного выполнения
+        
+        // Планировщик выполнения
+        private DateTime? scheduledDateTime = null;
+        private string? scheduledMacroFile = null;
+        private bool isWaitingForSchedule = false;
         
         // Управление файлами записей
         private List<string> savedMacroFiles = new List<string>(); // Список файлов в директории приложения
@@ -35,10 +41,11 @@ namespace MacroRecorderGUI
         {
             Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F6, Keys.F7, Keys.F8,
             Keys.F9, Keys.F10, Keys.F11, Keys.F12,
-            Keys.Escape, Keys.Tab, Keys.CapsLock, Keys.NumLock, Keys.Scroll,
+            Keys.Escape, Keys.CapsLock, Keys.NumLock, Keys.Scroll,
             Keys.PrintScreen, Keys.Insert, Keys.Delete,
             Keys.Alt, Keys.Control, Keys.Shift,
             Keys.LWin, Keys.RWin, Keys.Apps
+            // Убрали Keys.Tab, чтобы Ctrl+Tab не считался системной клавишей
         };
 
         // Константы для регистрации горячих клавиш
@@ -69,8 +76,13 @@ namespace MacroRecorderGUI
         {
             InitializeComponent();
             InitializeComponents();
+            LoadHotkeysFromFile(); // Загружаем сохраненные горячие клавиши
             RegisterGlobalHotkeys();
             InitializeTimers(); // НОВЫЙ вызов
+            
+            // Подключаем обработчики для отслеживания клавиш при настройке горячих клавиш
+            this.KeyDown += MainForm_KeyDown;
+            this.KeyUp += MainForm_KeyUp;
         }
 
         private void InitializeTimers()
@@ -84,6 +96,11 @@ namespace MacroRecorderGUI
             playbackTimer = new System.Windows.Forms.Timer();
             playbackTimer.Interval = 100;
             playbackTimer.Tick += PlaybackTimer_Tick!;
+
+            // Таймер планировщика (проверка каждую секунду)
+            scheduleTimer = new System.Windows.Forms.Timer();
+            scheduleTimer.Interval = 1000;
+            scheduleTimer.Tick += ScheduleTimer_Tick!;
         }
 
         private void RecordingTimer_Tick(object sender, EventArgs e)
@@ -94,6 +111,37 @@ namespace MacroRecorderGUI
         private void PlaybackTimer_Tick(object sender, EventArgs e)
         {
             UpdatePlaybackTime();
+        }
+
+        private void ScheduleTimer_Tick(object sender, EventArgs e)
+        {
+            if (scheduledDateTime.HasValue && scheduledMacroFile != null && isWaitingForSchedule)
+            {
+                if (DateTime.Now >= scheduledDateTime.Value)
+                {
+                    // Время наступило - запускаем воспроизведение
+                    scheduleTimer?.Stop();
+                    isWaitingForSchedule = false;
+                    currentMacroFile = scheduledMacroFile;
+                    scheduledDateTime = null;
+                    scheduledMacroFile = null;
+                    
+                    AddLog($"⏰ Запуск запланированного воспроизведения: {Path.GetFileName(currentMacroFile)}");
+                    PlayMacro();
+                }
+                else
+                {
+                    // Обновляем статус
+                    if (lblStatus != null && !isRecording && !isPlaying)
+                    {
+                        string dateStr = scheduledDateTime.Value.ToString("dd.MM.yyyy");
+                        string timeStr = scheduledDateTime.Value.ToString("HH:mm");
+                        lblStatus.Text = $"⏳ Ожидание {dateStr} {timeStr} для воспроизведения";
+                        lblStatus.ForeColor = System.Drawing.Color.FromArgb(255, 152, 0);
+                        lblStatus.BackColor = System.Drawing.Color.FromArgb(255, 243, 224);
+                    }
+                }
+            }
         }
 
         private void UpdateRecordingTime()
@@ -222,6 +270,9 @@ namespace MacroRecorderGUI
     {
         UnregisterGlobalHotkeys();
         
+            // Небольшая задержка после отмены всех горячих клавиш
+            System.Threading.Thread.Sleep(50);
+            
             // Используем сохраненные горячие клавиши или значения по умолчанию
             RegisterSingleHotkey(HOTKEY_START_RECORD, 
                 savedHotkeys.ContainsKey(HOTKEY_START_RECORD) ? savedHotkeys[HOTKEY_START_RECORD] : Keys.F9,
@@ -254,14 +305,80 @@ namespace MacroRecorderGUI
         
         private void RegisterSingleHotkey(int hotkeyId, Keys key, uint modifier)
         {
-            uint vk = (uint)key;
-            if (key == (Keys)0xC0) vk = VK_BACKQUOTE;
-            else if (key == Keys.Pause) vk = VK_PAUSE;
-            else if (key == Keys.Home) vk = VK_HOME;
+            // Убеждаемся, что старая регистрация отменена (несколько раз для надежности)
+            for (int i = 0; i < 3; i++)
+            {
+                UnregisterHotKey(this.Handle, hotkeyId);
+            }
+            
+            // Небольшая задержка для гарантии, что система обработала отмену
+            System.Threading.Thread.Sleep(50);
+            
+            // Используем KeysToVirtualKey для правильного преобразования
+            Console.WriteLine($"DEBUG RegisterSingleHotkey: hotkeyId={hotkeyId}, key={key} (0x{(int)key:X} = {(int)key} decimal), modifier={modifier}");
+            uint vk = KeysToVirtualKey(key);
+            Console.WriteLine($"DEBUG RegisterSingleHotkey: после KeysToVirtualKey vk={vk:X} ({vk} decimal)");
             
             bool result = RegisterHotKey(this.Handle, hotkeyId, modifier, vk);
-            Console.WriteLine($"Hotkey {hotkeyId} ({key}, mod={modifier}) регистрация: {result}");
-    }
+            Console.WriteLine($"Hotkey {hotkeyId} ({key}, mod={modifier}, vk={vk:X}) регистрация: {result}");
+        if (!result)
+        {
+                int error = Marshal.GetLastWin32Error();
+                AddLog($"⚠️ Не удалось зарегистрировать горячую клавишу {GetHotkeyActionName(hotkeyId)}: {key} (код ошибки: {error}, vk={vk:X}, mod={modifier})");
+            }
+            else
+            {
+                AddLog($"✅ Горячая клавиша {GetHotkeyActionName(hotkeyId)} успешно зарегистрирована: {key} с модификаторами {modifier} (vk={vk:X})");
+            }
+        }
+        
+        private uint KeysToVirtualKey(Keys key)
+        {
+            // Убираем модификаторы, оставляя только саму клавишу (нижние 16 бит)
+            uint vk = (uint)((int)key & 0xFFFF);
+            
+            // Если vk == 0 после удаления модификаторов, значит были только модификаторы
+            // Пробуем убрать модификаторы через GetKeyWithoutModifiers
+            if (vk == 0)
+            {
+                Keys cleanKey = GetKeyWithoutModifiers(key);
+                vk = (uint)((int)cleanKey & 0xFFFF);
+            }
+            
+            // Специальные клавиши с явным указанием VK кода
+            // Проверяем исходный key (нижние 16 бит)
+            int keyCode = (int)key & 0xFFFF;
+            
+            if (keyCode == 0xC0 || key == Keys.Oemtilde) 
+                vk = VK_BACKQUOTE; // 0xC0
+            else if (keyCode == 0x13 || key == Keys.Pause) 
+                vk = VK_PAUSE; // 0x13
+            else if (keyCode == 0x24 || key == Keys.Home) 
+                vk = VK_HOME; // 0x24
+            else if (keyCode == 0x23 || key == Keys.End) 
+                vk = 0x23; // VK_END
+            else if (keyCode == 0x21 || key == Keys.PageUp || key == Keys.Prior) 
+                vk = 0x21; // VK_PRIOR
+            else if (keyCode == 0x22 || key == Keys.PageDown || key == Keys.Next) 
+                vk = 0x22; // VK_NEXT
+            else if (keyCode == 0x2D || key == Keys.Insert) 
+                vk = 0x2D; // VK_INSERT
+            else if (keyCode == 0x2E || key == Keys.Delete) 
+                vk = 0x2E; // VK_DELETE
+            else if (keyCode == 0x03 || key == Keys.Cancel)
+                vk = 0x03; // VK_CANCEL (Ctrl+Break)
+            // Для F-клавиш (F1-F12: 0x70-0x7B) и остальных клавиш vk уже установлен выше через нижние 16 бит
+            
+            // Если получили пробел (0x20) для F-клавиши, это ошибка - возвращаем исходный код
+            if (vk == 0x20 && (keyCode >= 0x70 && keyCode <= 0x7B))
+            {
+                Console.WriteLine($"ERROR: KeysToVirtualKey получил пробел для F-клавиши! key={key} (0x{(int)key:X}), keyCode={keyCode:X}, используем keyCode как vk");
+                vk = (uint)keyCode;
+            }
+            
+            Console.WriteLine($"DEBUG KeysToVirtualKey: key={key} (0x{(int)key:X}), keyCode={keyCode:X}, vk={vk:X} ({vk} decimal)");
+            return vk;
+        }
 
         private void UnregisterGlobalHotkeys()
         {
@@ -285,6 +402,13 @@ namespace MacroRecorderGUI
         {
             if (m.Msg == WM_HOTKEY)
             {
+                // Игнорируем горячие клавиши если открыто меню настроек И мы не ожидаем настройку новой горячей клавиши
+                if (panelSettings != null && panelSettings.Visible && (waitingForHotkeyButton == null || !waitingForHotkeyId.HasValue))
+                {
+                    base.WndProc(ref m);
+                    return;
+                }
+                
                 switch (m.WParam.ToInt32())
                 {
                     case HOTKEY_START_RECORD:
@@ -342,97 +466,27 @@ namespace MacroRecorderGUI
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // Если ожидаем нажатие клавиши для горячей клавиши (в настройках)
-            if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue)
+            // ВАЖНО: Обрабатываем горячую клавишу ТОЛЬКО если панель настроек видима И мы ожидаем нажатие клавиши
+            if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
             {
-                Keys key = GetKeyWithoutModifiers(keyData);
-                uint modifier = GetModifierFromKeys(keyData);
-                
-                // Проверяем, является ли клавиша системной
-                bool isSystemKey = systemKeys.Contains(key);
-                if (isSystemKey)
-                {
-                    var result = MessageBox.Show(
-                        "Предупреждение: эта клавиша может использоваться системой, в случае, если она не работает, попробуйте другую клавишу или сочетание клавиш.\n\nПродолжить?",
-                        "Предупреждение",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning);
-                    
-                    if (result == DialogResult.No)
-                    {
-                        waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
-                        waitingForHotkeyButton = null;
-                        waitingForHotkeyId = null;
-                        return true;
-                    }
-                }
-                
-                // Сохраняем новую горячую клавишу
-                savedHotkeys[waitingForHotkeyId.Value] = key;
-                savedHotkeyModifiers[waitingForHotkeyId.Value] = modifier;
-                
-                // Преобразуем Keys в строку
-                string keyString = FormatKeysToString(keyData, modifier);
-                
-                // Обновляем текст кнопки
-                waitingForHotkeyButton.Text = keyString;
-                waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
-                
-                // Обновляем Tag кнопки
-                waitingForHotkeyButton.Tag = new { HotkeyId = waitingForHotkeyId.Value, Key = key, Mod = modifier };
-                
-                // Регистрируем новую горячую клавишу
-                RegisterSingleHotkey(waitingForHotkeyId.Value, key, modifier);
-                
-                AddLog($"⌨️ Установлена горячая клавиша для {GetHotkeyActionName(waitingForHotkeyId.Value)}: {keyString}");
-                
-                waitingForHotkeyButton = null;
-                waitingForHotkeyId = null;
-                
-                return true; // Обработали нажатие
+                return false; // НЕ обрабатываем здесь, пусть KeyDown/KeyUp обработают
             }
             
-            if (msg.Msg == WM_HOTKEY)
+            // Блокируем обработку клавиш только если открыто меню настроек И мы НЕ ожидаем настройку
+            if (panelSettings != null && panelSettings.Visible)
             {
-                int id = msg.WParam.ToInt32();
-                
-                switch (id)
-                {
-                    case HOTKEY_START_RECORD:
-                        StartRecording();
-                        return true;
-                    case HOTKEY_STOP_RECORD:
-                        StopRecording();
-                        return true;
-                    case HOTKEY_PLAY:
-                        PlayMacro();
-                        return true;
-                    case HOTKEY_PLAY_LOOP:
-                        PlayMacroLoop();
-                        return true;
-                    case HOTKEY_STOP_PLAY:
-                        StopPlayback();
-                        return true;
-                    case HOTKEY_PAUSE_RECORD:
-                        TogglePauseRecording();
-                        return true;
-                    case HOTKEY_PAUSE_PLAYBACK:
-                        TogglePausePlayback();
-                        return true;
-                }
+                return true; // Блокируем все клавиши в меню настроек (но не когда настраиваем горячую клавишу)
             }
             
+            // Обработка прямых нажатий клавиш (не глобальные горячие клавиши, они обрабатываются в WndProc)
             if (isPlaying && (int)keyData == 0xC0)
             {
                 StopPlayback();
                 return true;
             }
             
-            if (keyData == Keys.F9 && !isRecording && !isPlaying)
-            {
-                StartRecording();
-                return true;
-            }
+            // F9 обрабатывается через глобальные горячие клавиши в WndProc, здесь не обрабатываем
+            // чтобы избежать дублирования и конфликтов
             else if (keyData == Keys.F10 && isRecording)
             {
                 StopRecording();
@@ -1100,9 +1154,29 @@ namespace MacroRecorderGUI
 
             AddLog($"📂 Загрузка файла для воспроизведения: {Path.GetFileName(fileToLoad)}");
             var events = recorder.LoadFromFile(fileToLoad);
-            if (events != null && events.Count > 0)
+            
+            // Проверяем наличие событий до установки состояния воспроизведения
+            if (events == null || events.Count == 0)
             {
+                // Сбрасываем состояние, если оно было установлено (например, из планировщика)
+                isPlaying = false;
+                isWaitingForSchedule = false;
+                scheduleTimer?.Stop();
+                scheduledDateTime = null;
+                scheduledMacroFile = null;
+                playbackCancellation?.Cancel();
+                playbackTimer?.Stop();
+                UpdateUI();
+                UpdateButtonStates();
+                
+                MessageBox.Show("Нет записанных событий для воспроизведения!", "Ошибка", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // События есть - начинаем воспроизведение
                 isPlaying = true;
+            isWaitingForSchedule = false; // Сбрасываем режим ожидания, начинается воспроизведение
                 playbackCancellation = new CancellationTokenSource();
                 AddLog("▶ Запущено воспроизведение (F11)");
                 playbackTimer?.Start();
@@ -1135,12 +1209,6 @@ namespace MacroRecorderGUI
                 
                 isPlaying = false;
                 UpdateUI();
-            }
-            else
-            {
-                MessageBox.Show("Нет записанных событий для воспроизведения!", "Ошибка", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
         }
 
         private async void PlayMacroLoop()
@@ -1159,9 +1227,31 @@ namespace MacroRecorderGUI
 
             AddLog($"📂 Загрузка файла для циклического воспроизведения: {Path.GetFileName(fileToLoad)}");
             var events = recorder.LoadFromFile(fileToLoad);
+            
+            // Проверяем наличие событий до установки состояния воспроизведения
+            if (events == null || events.Count == 0)
+            {
+                // Сбрасываем состояние
+                isPlaying = false;
+                isWaitingForSchedule = false;
+                scheduleTimer?.Stop();
+                scheduledDateTime = null;
+                scheduledMacroFile = null;
+                playbackCancellation?.Cancel();
+                playbackTimer?.Stop();
+                UpdateUI();
+                UpdateButtonStates();
+                
+                MessageBox.Show("Нет записанных событий для воспроизведения!", "Ошибка", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            
+            // События есть - начинаем воспроизведение
             if (events != null && events.Count > 0)
             {
                 isPlaying = true;
+                isWaitingForSchedule = false; // Сбрасываем режим ожидания, начинается воспроизведение
                 playbackCancellation = new CancellationTokenSource();
                 AddLog("🔄 Запущено циклическое воспроизведение (Ctrl+F12)");
                 playbackTimer?.Start();
@@ -1195,15 +1285,23 @@ namespace MacroRecorderGUI
                 isPlaying = false;
                 UpdateUI();
             }
-            else
-            {
-                MessageBox.Show("Нет записанных событий для воспроизведения!", "Ошибка", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
         }
 
         private void StopPlayback()
         {
+            // Если ожидается запланированное выполнение, отменяем его
+            if (isWaitingForSchedule && !isPlaying)
+            {
+                scheduleTimer?.Stop();
+                isWaitingForSchedule = false;
+                scheduledDateTime = null;
+                scheduledMacroFile = null;
+                AddLog("❌ Запланированное воспроизведение отменено");
+                UpdateUI();
+                UpdateButtonStates();
+                return;
+            }
+
             if (!isPlaying || player == null) return;
 
             playbackCancellation?.Cancel();
@@ -1229,33 +1327,48 @@ namespace MacroRecorderGUI
             // Обновляем статус (если не в режиме записи)
             if (!isRecording && !isPlaying && lblStatus != null)
             {
+                // Если ожидается запланированное выполнение, статус уже обновляется в ScheduleTimer_Tick
+                if (!isWaitingForSchedule)
+            {
                 lblStatus.Text = "● ГОТОВ К РАБОТЕ";
                 lblStatus.ForeColor = System.Drawing.Color.FromArgb(33, 150, 243);
                 lblStatus.BackColor = System.Drawing.Color.FromArgb(227, 242, 253);
+                }
             }
         }
 
         private void UpdateButtonStates()
         {
+            // В режиме ожидания все кнопки недоступны кроме остановки
+            bool isWaitingMode = isWaitingForSchedule && !isPlaying && !isRecording;
+            
             // Запись
-            btnStartRecord.Enabled = !isRecording && !isPlaying;
+            btnStartRecord.Enabled = !isRecording && !isPlaying && !isWaitingMode;
             btnStopRecord.Enabled = isRecording && !isPlaying;
             btnPauseRecord.Enabled = isRecording && !isPlaying;
 
             // Воспроизведение
-            btnPlay.Enabled = !isRecording && !isPlaying;
-            btnPlayLoop.Enabled = !isRecording && !isPlaying;
-            btnStopPlayback.Enabled = isPlaying && !isRecording;
+            btnPlay.Enabled = !isRecording && !isPlaying && !isWaitingMode;
+            btnPlayLoop.Enabled = !isRecording && !isPlaying && !isWaitingMode;
+            btnStopPlayback.Enabled = isPlaying && !isRecording || isWaitingMode;
+            if (btnSchedulePlayback != null)
+            {
+                btnSchedulePlayback.Enabled = !isRecording && !isPlaying && !isWaitingMode;
+            }
             // Кнопка паузы доступна только после начала реального воспроизведения
             btnPausePlayback.Enabled = isPlaying && !isRecording && (player?.PlaybackStarted ?? false);
 
-            // Обновляем внешний вид кнопок
-            UpdateButtonAppearance(btnStartRecord, !isRecording && !isPlaying);
+            // Обновляем внешний вид кнопок (isWaitingMode уже определен выше)
+            UpdateButtonAppearance(btnStartRecord, !isRecording && !isPlaying && !isWaitingMode);
             UpdateButtonAppearance(btnStopRecord, isRecording && !isPlaying);
             UpdateButtonAppearance(btnPauseRecord, isRecording && !isPlaying);
-            UpdateButtonAppearance(btnPlay, !isRecording && !isPlaying);
-            UpdateButtonAppearance(btnPlayLoop, !isRecording && !isPlaying);
-            UpdateButtonAppearance(btnStopPlayback, isPlaying && !isRecording);
+            UpdateButtonAppearance(btnPlay, !isRecording && !isPlaying && !isWaitingMode);
+            UpdateButtonAppearance(btnPlayLoop, !isRecording && !isPlaying && !isWaitingMode);
+            UpdateButtonAppearance(btnStopPlayback, isPlaying && !isRecording || isWaitingMode);
+            if (btnSchedulePlayback != null)
+            {
+                UpdateButtonAppearance(btnSchedulePlayback, !isRecording && !isPlaying && !isWaitingMode);
+            }
             UpdateButtonAppearance(btnPausePlayback, isPlaying && !isRecording);
 
             // Обновляем текст кнопки паузы записи в зависимости от состояния
@@ -1351,6 +1464,54 @@ namespace MacroRecorderGUI
         private void btnPlayLoop_Click(object sender, EventArgs e)
         {
             PlayMacroLoop();
+        }
+
+        private void btnSchedulePlayback_Click(object sender, EventArgs e)
+        {
+            // Проверяем, что файл выбран
+            string fileToSchedule = GetSelectedMacroFile();
+            if (string.IsNullOrEmpty(fileToSchedule))
+            {
+                AddLog("⚠️ Файл для воспроизведения не выбран");
+                MessageBox.Show("Пожалуйста, выберите файл для воспроизведения или загрузите файл из проводника.", 
+                    "Файл не выбран", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Проверяем, нет ли уже запланированного выполнения
+            if (isWaitingForSchedule && scheduledDateTime.HasValue)
+            {
+                MessageBox.Show($"Уже запланировано выполнение на {scheduledDateTime.Value:dd.MM.yyyy HH:mm}. " +
+                    "Отмените текущее расписание перед созданием нового.", 
+                    "Расписание уже существует", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Открываем форму выбора даты и времени
+            ScheduleForm scheduleForm = new ScheduleForm();
+            if (scheduleForm.ShowDialog() == DialogResult.OK && scheduleForm.Confirmed)
+            {
+                DateTime selectedDateTime = scheduleForm.SelectedDateTime;
+
+                // Проверяем конфликты
+                // (в будущем можно добавить проверку нескольких расписаний)
+                
+                // Сохраняем запланированное выполнение
+                scheduledDateTime = selectedDateTime;
+                scheduledMacroFile = fileToSchedule;
+                isWaitingForSchedule = true;
+
+                // Запускаем таймер планировщика
+                scheduleTimer?.Start();
+
+                // Обновляем UI
+                UpdateUI();
+                UpdateButtonStates();
+
+                string dateStr = selectedDateTime.ToString("dd.MM.yyyy");
+                string timeStr = selectedDateTime.ToString("HH:mm");
+                AddLog($"⏰ Запланировано воспроизведение {Path.GetFileName(fileToSchedule)} на {dateStr} {timeStr}");
+            }
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
@@ -3204,21 +3365,254 @@ namespace MacroRecorderGUI
         
         private Button? waitingForHotkeyButton = null;
         private int? waitingForHotkeyId = null;
+        private Keys currentPressedKeys = Keys.None; // Текущие нажатые клавиши при ожидании горячей клавиши
+        private Keys maxPressedKeys = Keys.None; // Максимальная комбинация всех одновременно нажатых клавиш
+        private HashSet<Keys> pressedKeysSet = new HashSet<Keys>(); // Множество нажатых клавиш
+        private Keys lastNonModifierKey = Keys.None; // Последняя нажатая не-модификаторная клавиша
         
         private void ChangeHotkey(Button btn, int hotkeyId)
         {
+            // ВАЖНО: Разрешаем изменение горячей клавиши ТОЛЬКО если панель настроек видима
+            if (panelSettings == null || !panelSettings.Visible)
+            {
+                return; // Не выполняем изменение, если панель настроек не видима
+            }
+            
             btn.Text = "Нажмите клавишу...";
             btn.BackColor = System.Drawing.Color.FromArgb(255, 235, 59);
             
             // Устанавливаем флаг ожидания нажатия клавиши
             waitingForHotkeyButton = btn;
             waitingForHotkeyId = hotkeyId;
+            currentPressedKeys = Keys.None;
+            maxPressedKeys = Keys.None;
+            lastNonModifierKey = Keys.None;
+            pressedKeysSet.Clear();
             
             // Форма должна быть в фокусе для захвата клавиш
-            this.Focus();
             this.KeyPreview = true;
+            this.Focus();
+            this.BringToFront();
+            this.Activate();
             
             AddLog($"⌨️ Ожидание нажатия клавиши для: {GetHotkeyActionName(hotkeyId)}");
+        }
+        
+        private void MainForm_KeyDown(object? sender, KeyEventArgs e)
+        {
+            // Обрабатываем только если ожидаем настройку горячей клавиши И панель настроек видима
+            if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
+            {
+                e.Handled = true; // Блокируем дальнейшую обработку
+                
+                // Извлекаем клавишу из события - используем именно ту клавишу, которая была нажата
+                // e.KeyCode содержит код клавиши без модификаторов
+                Keys keyCode = e.KeyCode;
+                Keys modifierKeys = e.KeyData & Keys.Modifiers;
+                
+                // Добавляем не-модификаторную клавишу (используем KeyCode, а не KeyData)
+                if (keyCode != Keys.None && keyCode != Keys.ControlKey && keyCode != Keys.Menu && keyCode != Keys.ShiftKey)
+                {
+                    pressedKeysSet.Add(keyCode);
+                    // Сохраняем последнюю нажатую не-модификаторную клавишу
+                    Keys excludedModifiers = Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.ControlKey | Keys.Menu | Keys.ShiftKey;
+                    if ((keyCode & excludedModifiers) == 0)
+                    {
+                        lastNonModifierKey = keyCode;
+                    }
+                }
+                
+                // Добавляем модификаторы как отдельные клавиши (если они есть)
+                if ((modifierKeys & Keys.Control) != 0)
+                    pressedKeysSet.Add(Keys.Control);
+                if ((modifierKeys & Keys.Alt) != 0)
+                    pressedKeysSet.Add(Keys.Alt);
+                if ((modifierKeys & Keys.Shift) != 0)
+                    pressedKeysSet.Add(Keys.Shift);
+                
+                // Обновляем текущие нажатые клавиши
+                currentPressedKeys = Keys.None;
+                foreach (var k in pressedKeysSet)
+                {
+                    currentPressedKeys |= k;
+                }
+                
+                // Сохраняем максимальную комбинацию всех одновременно нажатых клавиш
+                if (currentPressedKeys != Keys.None)
+                {
+                    maxPressedKeys = currentPressedKeys; // Обновляем максимальную комбинацию
+                    
+                    // Обновляем текст кнопки в реальном времени
+                    uint modifier = GetModifierFromKeys(currentPressedKeys);
+                    string previewText = FormatKeysToString(currentPressedKeys, modifier);
+                    waitingForHotkeyButton.Text = previewText;
+                }
+            }
+        }
+        
+        private void MainForm_KeyUp(object? sender, KeyEventArgs e)
+        {
+            // Обрабатываем только если ожидаем настройку горячей клавиши И панель настроек видима
+            if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
+            {
+                e.Handled = true; // Блокируем дальнейшую обработку
+                
+                // Удаляем клавишу из множества нажатых
+                // Используем KeyCode для точного определения клавиши
+                Keys keyCode = e.KeyCode;
+                Keys releasedModifiers = e.KeyData & Keys.Modifiers;
+                
+                // Удаляем не-модификаторную клавишу
+                if (keyCode != Keys.None && keyCode != Keys.ControlKey && keyCode != Keys.Menu && keyCode != Keys.ShiftKey)
+                {
+                    pressedKeysSet.Remove(keyCode);
+                }
+                
+                // Удаляем модификаторы
+                if ((releasedModifiers & Keys.Control) != 0)
+                    pressedKeysSet.Remove(Keys.Control);
+                if ((releasedModifiers & Keys.Alt) != 0)
+                    pressedKeysSet.Remove(Keys.Alt);
+                if ((releasedModifiers & Keys.Shift) != 0)
+                    pressedKeysSet.Remove(Keys.Shift);
+                
+                // Если все клавиши отпущены - сохраняем горячую клавишу
+                if (pressedKeysSet.Count == 0 && maxPressedKeys != Keys.None)
+                {
+                    // Используем максимальную комбинацию всех одновременно нажатых клавиш
+                    Keys finalCombination = maxPressedKeys;
+                    
+                    // Извлекаем модификаторы
+                    uint finalModifier = GetModifierFromKeys(finalCombination);
+                    
+                    // Используем последнюю нажатую не-модификаторную клавишу
+                    // НО если это модификатор или None, используем текущий KeyCode из события KeyUp
+                    Keys finalKey = lastNonModifierKey;
+                    
+                    // Если lastNonModifierKey не установлен или это модификатор, используем KeyCode из текущего события
+                    Keys excludedModifiers = Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.ControlKey | Keys.Menu | Keys.ShiftKey | Keys.LMenu | Keys.RMenu | Keys.LShiftKey | Keys.RShiftKey | Keys.LControlKey | Keys.RControlKey;
+                    if (finalKey == Keys.None || (finalKey & excludedModifiers) != 0)
+                    {
+                        // Используем KeyCode из события KeyUp (это реальная клавиша, которая была отпущена)
+                        if (keyCode != Keys.None && (keyCode & excludedModifiers) == 0)
+                        {
+                            finalKey = keyCode;
+                        }
+                        else
+                        {
+                            // Если и KeyCode не подходит, извлекаем из комбинации
+                            Keys keysWithoutMods = GetKeyWithoutModifiers(finalCombination);
+                            finalKey = keysWithoutMods;
+                            
+                            // Убираем модификаторы из keysWithoutMods
+                            finalKey &= ~excludedModifiers;
+                            
+                            // Если все еще не нашли, ищем вручную
+                            if (finalKey == Keys.None)
+                            {
+                                for (int i = 255; i >= 1; i--)
+                                {
+                                    Keys testKey = (Keys)i;
+                                    if ((keysWithoutMods & testKey) == testKey && (testKey & excludedModifiers) == 0)
+                                    {
+                                        finalKey = testKey;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Если все еще None, используем keysWithoutMods как есть
+                            if (finalKey == Keys.None)
+                            {
+                                finalKey = keysWithoutMods;
+                            }
+                        }
+                    }
+                    
+                    // Отладочная информация
+                    Console.WriteLine($"DEBUG: lastNonModifierKey = {lastNonModifierKey}, keyCode = {keyCode}, maxPressedKeys = {maxPressedKeys}, finalKey = {finalKey}, finalCombination = {finalCombination}");
+                    
+                    // Проверяем, является ли клавиша системной
+                    bool isSystemKey = systemKeys.Contains(finalKey);
+                    if (isSystemKey)
+                    {
+                        var result = MessageBox.Show(
+                            "Предупреждение: эта клавиша может использоваться системой, в случае, если она не работает, попробуйте другую клавишу или сочетание клавиш.\n\nПродолжить?",
+                            "Предупреждение",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning);
+                        
+                        if (result == DialogResult.No)
+                        {
+                            // Восстанавливаем старое значение
+                            string oldText = FormatKeysToString(
+                                savedHotkeys.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeys[waitingForHotkeyId.Value] : Keys.None,
+                                savedHotkeyModifiers.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeyModifiers[waitingForHotkeyId.Value] : 0);
+                            waitingForHotkeyButton.Text = oldText;
+                            waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+                            waitingForHotkeyButton = null;
+                            waitingForHotkeyId = null;
+                            currentPressedKeys = Keys.None;
+                            maxPressedKeys = Keys.None;
+                            pressedKeysSet.Clear();
+                            return;
+                        }
+                    }
+                    
+                    // Сохраняем новую горячую клавишу в память ПЕРЕД отменой старой
+                    savedHotkeys[waitingForHotkeyId.Value] = finalKey;
+                    savedHotkeyModifiers[waitingForHotkeyId.Value] = finalModifier;
+                    
+                    // Сохраняем в файл
+                    SaveHotkeysToFile();
+                    
+                    // Регистрируем новую горячую клавишу через RegisterSingleHotkey
+                    // (он сам отменит старую регистрацию перед регистрацией новой)
+                    int hotkeyId = waitingForHotkeyId.Value;
+                    
+                    AddLog($"🔧 Попытка регистрации горячей клавиши {GetHotkeyActionName(hotkeyId)}: key={finalKey}, mod={finalModifier}");
+                    
+                    // Используем RegisterSingleHotkey для единообразной логики регистрации
+                    RegisterSingleHotkey(hotkeyId, finalKey, finalModifier);
+                    
+                    // Преобразуем Keys в строку
+                    string keyString = FormatKeysToString(finalCombination, finalModifier);
+                    
+                    // Обновляем текст кнопки
+                    waitingForHotkeyButton.Text = keyString;
+                    waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+                    
+                    // Обновляем Tag кнопки
+                    waitingForHotkeyButton.Tag = new { HotkeyId = waitingForHotkeyId.Value, Key = finalKey, Mod = finalModifier };
+                    
+                    AddLog($"⌨️ Установлена горячая клавиша для {GetHotkeyActionName(waitingForHotkeyId.Value)}: {keyString}");
+                    
+                    // ВАЖНО: Сбрасываем состояние ПОСЛЕ сохранения, чтобы горячие клавиши не активировались на главном экране
+                    waitingForHotkeyButton = null;
+                    waitingForHotkeyId = null;
+                    currentPressedKeys = Keys.None;
+                    maxPressedKeys = Keys.None;
+                    lastNonModifierKey = Keys.None;
+                    pressedKeysSet.Clear();
+                    
+                    // Убеждаемся, что KeyPreview выключен после настройки
+                    this.KeyPreview = false;
+                }
+                else if (pressedKeysSet.Count > 0)
+                {
+                    // Обновляем текущие нажатые клавиши (после удаления одной)
+                    currentPressedKeys = Keys.None;
+                    foreach (var k in pressedKeysSet)
+                    {
+                        currentPressedKeys |= k;
+                    }
+                    // Добавляем модификаторы из текущего состояния
+                    if (e.KeyData != Keys.None)
+                    {
+                        currentPressedKeys |= (e.KeyData & Keys.Modifiers);
+                    }
+                }
+            }
         }
         
         private string GetHotkeyActionName(int hotkeyId)
@@ -3241,12 +3635,19 @@ namespace MacroRecorderGUI
         {
             string result = "";
             
-            // Проверяем модификаторы из параметра или из keyData
-            if (modifier == 0x0002 || (keyData & Keys.Control) == Keys.Control)
+            // Используем modifier если он указан, иначе извлекаем из keyData
+            uint mods = modifier;
+            if (mods == 0)
+            {
+                mods = GetModifierFromKeys(keyData);
+            }
+            
+            // Проверяем модификаторы
+            if ((mods & 0x0002) != 0) // MOD_CONTROL
                 result += "Ctrl+";
-            if (modifier == 0x0001 || (keyData & Keys.Alt) == Keys.Alt)
+            if ((mods & 0x0001) != 0) // MOD_ALT
                 result += "Alt+";
-            if ((keyData & Keys.Shift) == Keys.Shift)
+            if ((mods & 0x0004) != 0) // MOD_SHIFT
                 result += "Shift+";
             
             Keys key = keyData & ~Keys.Modifiers;
@@ -3288,16 +3689,106 @@ namespace MacroRecorderGUI
         private uint GetModifierFromKeys(Keys keyData)
         {
             uint mod = MOD_NONE;
+            // Поддерживаем комбинации модификаторов
             if ((keyData & Keys.Control) == Keys.Control)
-                mod = 0x0002; // MOD_CONTROL
-            else if ((keyData & Keys.Alt) == Keys.Alt)
-                mod = 0x0001; // MOD_ALT
+                mod |= 0x0002; // MOD_CONTROL
+            if ((keyData & Keys.Alt) == Keys.Alt)
+                mod |= 0x0001; // MOD_ALT
+            if ((keyData & Keys.Shift) == Keys.Shift)
+                mod |= 0x0004; // MOD_SHIFT
             return mod;
         }
         
         private Keys GetKeyWithoutModifiers(Keys keyData)
         {
-            return keyData & ~Keys.Modifiers;
+            // Keys.Modifiers включает Control, Alt, Shift, но может не включать все модификаторы
+            // Убираем все возможные модификаторы, чтобы получить чистую клавишу
+            return keyData & ~(Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.Modifiers);
+        }
+        
+        private void SaveHotkeysToFile()
+        {
+            try
+            {
+                var hotkeyData = new Dictionary<string, object>();
+                var keysDict = new Dictionary<string, int>();
+                var modsDict = new Dictionary<string, uint>();
+                
+                foreach (var kvp in savedHotkeys)
+                {
+                    keysDict[kvp.Key.ToString()] = (int)kvp.Value;
+                }
+                
+                foreach (var kvp in savedHotkeyModifiers)
+                {
+                    modsDict[kvp.Key.ToString()] = kvp.Value;
+                }
+                
+                hotkeyData["Keys"] = keysDict;
+                hotkeyData["Modifiers"] = modsDict;
+                
+                string json = System.Text.Json.JsonSerializer.Serialize(hotkeyData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                string hotkeysPath = Path.Combine(Application.StartupPath, "hotkeys.json");
+                File.WriteAllText(hotkeysPath, json);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при сохранении горячих клавиш: {ex.Message}");
+            }
+        }
+        
+        private void LoadHotkeysFromFile()
+        {
+            try
+            {
+                string hotkeysPath = Path.Combine(Application.StartupPath, "hotkeys.json");
+                if (!File.Exists(hotkeysPath))
+                    return;
+                
+                string json = File.ReadAllText(hotkeysPath);
+                var hotkeyData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
+                
+                // Загружаем клавиши
+                if (hotkeyData.TryGetProperty("Keys", out var keysElement))
+                {
+                    foreach (var prop in keysElement.EnumerateObject())
+                    {
+                        if (int.TryParse(prop.Name, out int hotkeyId) && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            int keyValue = prop.Value.GetInt32();
+                            Keys loadedKey = (Keys)keyValue;
+                            
+                            // Проверяем, что это не пробел (0x20 или Keys.Space) для HOTKEY_START_RECORD
+                            if (hotkeyId == HOTKEY_START_RECORD && (loadedKey == Keys.Space || keyValue == 0x20))
+                            {
+                                // Игнорируем пробел, используем значение по умолчанию F9
+                                AddLog($"⚠️ Обнаружен пробел для начала записи, заменяем на F9");
+                                continue;
+                            }
+                            
+                            // Логируем загруженное значение для отладки
+                            Console.WriteLine($"DEBUG LoadHotkeysFromFile: hotkeyId={hotkeyId}, keyValue={keyValue} (0x{keyValue:X}), loadedKey={loadedKey}");
+                            savedHotkeys[hotkeyId] = loadedKey;
+                        }
+                    }
+                }
+                
+                // Загружаем модификаторы
+                if (hotkeyData.TryGetProperty("Modifiers", out var modsElement))
+                {
+                    foreach (var prop in modsElement.EnumerateObject())
+                    {
+                        if (int.TryParse(prop.Name, out int hotkeyId) && prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            savedHotkeyModifiers[hotkeyId] = prop.Value.GetUInt32();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLog($"❌ Ошибка при загрузке горячих клавиш: {ex.Message}");
+            }
         }
         
         private void ResetHotkeysToDefault()

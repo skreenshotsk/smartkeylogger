@@ -31,6 +31,7 @@ namespace MacroRecorderGUI
             this.btnLoadMacroFile = new System.Windows.Forms.Button();
             this.cmbMacroFiles = new System.Windows.Forms.ComboBox();
             this.lblMacroFile = new System.Windows.Forms.Label();
+            this.btnSchedulePlayback = new System.Windows.Forms.Button();
             this.btnPausePlayback = new System.Windows.Forms.Button();
             this.lblPlaybackTitle = new System.Windows.Forms.Label();
             this.btnPlay = new System.Windows.Forms.Button();
@@ -38,9 +39,6 @@ namespace MacroRecorderGUI
             this.btnStopPlayback = new System.Windows.Forms.Button();
             this.panelStatus = new System.Windows.Forms.Panel();
             this.lblStatus = new System.Windows.Forms.Label();
-            this.panelHotkeys = new System.Windows.Forms.Panel();
-            this.lblHotkeys = new System.Windows.Forms.Label();
-            this.lblHotkeysTitle = new System.Windows.Forms.Label();
             this.panelLogs = new System.Windows.Forms.Panel();
             this.txtLogs = new System.Windows.Forms.RichTextBox();
             this.lblLogsTitle = new System.Windows.Forms.Label();
@@ -50,7 +48,6 @@ namespace MacroRecorderGUI
             this.panelRecording.SuspendLayout();
             this.panelPlayback.SuspendLayout();
             this.panelStatus.SuspendLayout();
-            this.panelHotkeys.SuspendLayout();
             this.panelLogs.SuspendLayout();
             this.panelMain.SuspendLayout();
             this.SuspendLayout();
@@ -184,6 +181,7 @@ namespace MacroRecorderGUI
             
             // panelPlayback
             this.panelPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
+            this.panelPlayback.Controls.Add(this.btnSchedulePlayback);
             this.panelPlayback.Controls.Add(this.btnLoadMacroFile);
             this.panelPlayback.Controls.Add(this.cmbMacroFiles);
             this.panelPlayback.Controls.Add(this.lblMacroFile);
@@ -194,7 +192,7 @@ namespace MacroRecorderGUI
             this.panelPlayback.Controls.Add(this.btnStopPlayback);
             this.panelPlayback.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelPlayback.Location = new System.Drawing.Point(0, 310);
-            this.panelPlayback.MinimumSize = new System.Drawing.Size(0, 280);
+            this.panelPlayback.MinimumSize = new System.Drawing.Size(0, 320);
             this.panelPlayback.Name = "panelPlayback";
             this.panelPlayback.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
             this.panelPlayback.Size = new System.Drawing.Size(700, 280);
@@ -258,6 +256,24 @@ namespace MacroRecorderGUI
             this.btnLoadMacroFile.UseVisualStyleBackColor = false;
             this.btnLoadMacroFile.Click += new System.EventHandler(this.btnLoadMacroFile_Click);
             
+            // btnSchedulePlayback
+            this.btnSchedulePlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(156)))), ((int)(((byte)(39)))), ((int)(((byte)(176)))));
+            this.btnSchedulePlayback.FlatAppearance.BorderSize = 0;
+            this.btnSchedulePlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSchedulePlayback.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.btnSchedulePlayback.ForeColor = System.Drawing.Color.White;
+            this.btnSchedulePlayback.Location = new System.Drawing.Point(470, 115);
+            this.btnSchedulePlayback.Name = "btnSchedulePlayback";
+            this.btnSchedulePlayback.Size = new System.Drawing.Size(200, 50);
+            this.btnSchedulePlayback.TabIndex = 8;
+            this.btnSchedulePlayback.Text = "⏰ ЗАДАТЬ ВРЕМЯ ВЫПОЛНЕНИЯ";
+            this.btnSchedulePlayback.UseVisualStyleBackColor = false;
+            this.btnSchedulePlayback.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnSchedulePlayback.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(123)))), ((int)(((byte)(31)))), ((int)(((byte)(162)))));
+            this.btnSchedulePlayback.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(74)))), ((int)(((byte)(20)))), ((int)(((byte)(140)))));
+            this.btnSchedulePlayback.Click += new System.EventHandler(this.btnSchedulePlayback_Click);
+            this.panelPlayback.Controls.Add(this.btnSchedulePlayback);
+            
             // btnPlay
             this.btnPlay.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnPlay.FlatAppearance.BorderSize = 0;
@@ -292,9 +308,9 @@ namespace MacroRecorderGUI
             this.btnStopPlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnStopPlayback.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
             this.btnStopPlayback.ForeColor = System.Drawing.Color.White;
-            this.btnStopPlayback.Location = new System.Drawing.Point(470, 115);
+            this.btnStopPlayback.Location = new System.Drawing.Point(30, 250);
             this.btnStopPlayback.Name = "btnStopPlayback";
-            this.btnStopPlayback.Size = new System.Drawing.Size(200, 50);
+            this.btnStopPlayback.Size = new System.Drawing.Size(640, 50);
             this.btnStopPlayback.TabIndex = 2;
             this.btnStopPlayback.Text = "⏹ ОСТАНОВИТЬ (`)";
             this.btnStopPlayback.UseVisualStyleBackColor = false;
@@ -303,7 +319,7 @@ namespace MacroRecorderGUI
             // panelStatus
             this.panelStatus.BackColor = System.Drawing.Color.White;
             this.panelStatus.Controls.Add(this.lblStatus);
-            this.panelStatus.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelStatus.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panelStatus.Name = "panelStatus";
             this.panelStatus.Size = new System.Drawing.Size(700, 70);
             this.panelStatus.TabIndex = 3;
@@ -317,40 +333,6 @@ namespace MacroRecorderGUI
             this.lblStatus.TabIndex = 0;
             this.lblStatus.Text = "● ГОТОВ К РАБОТЕ";
             this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            
-            // panelHotkeys
-            this.panelHotkeys.BackColor = System.Drawing.Color.White;
-            this.panelHotkeys.Controls.Add(this.lblHotkeys);
-            this.panelHotkeys.Controls.Add(this.lblHotkeysTitle);
-            this.panelHotkeys.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panelHotkeys.Location = new System.Drawing.Point(0, 600);
-            this.panelHotkeys.Name = "panelHotkeys";
-            this.panelHotkeys.Size = new System.Drawing.Size(700, 70);
-            this.panelHotkeys.TabIndex = 4;
-            
-            // lblHotkeys
-            this.lblHotkeys.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblHotkeys.Font = new System.Drawing.Font("Segoe UI", 8F);
-            this.lblHotkeys.Location = new System.Drawing.Point(0, 30);
-            this.lblHotkeys.Name = "lblHotkeys";
-            this.lblHotkeys.Padding = new System.Windows.Forms.Padding(30, 8, 30, 8);
-            this.lblHotkeys.Size = new System.Drawing.Size(700, 40);
-            this.lblHotkeys.TabIndex = 1;
-            this.lblHotkeys.Text = "F9 - Запись | F10 - Стоп | PAUSE - Пауза записи | F11 - Воспроизвести | Ctrl+F12 - Цикл | HOME - Пауза воспр. | ` - Стоп";
-            this.lblHotkeys.AutoSize = false;
-            this.lblHotkeys.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            
-            // lblHotkeysTitle
-            this.lblHotkeysTitle.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
-            this.lblHotkeysTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblHotkeysTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.lblHotkeysTitle.ForeColor = System.Drawing.Color.White;
-            this.lblHotkeysTitle.Location = new System.Drawing.Point(0, 0);
-            this.lblHotkeysTitle.Name = "lblHotkeysTitle";
-            this.lblHotkeysTitle.Size = new System.Drawing.Size(700, 30);
-            this.lblHotkeysTitle.TabIndex = 0;
-            this.lblHotkeysTitle.Text = "Горячие клавиши:";
-            this.lblHotkeysTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             
             // panelLogs
             this.panelLogs.BackColor = System.Drawing.Color.White;
@@ -401,10 +383,9 @@ namespace MacroRecorderGUI
             
             // panelMain
             this.panelMain.BackColor = System.Drawing.Color.White;
-            this.panelMain.Controls.Add(this.panelStatus);
-            this.panelMain.Controls.Add(this.panelHotkeys);
             this.panelMain.Controls.Add(this.panelPlayback);
             this.panelMain.Controls.Add(this.panelRecording);
+            this.panelMain.Controls.Add(this.panelStatus);
             this.panelMain.Controls.Add(this.panelHeader);
             this.panelMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelMain.Location = new System.Drawing.Point(0, 0);
@@ -414,7 +395,7 @@ namespace MacroRecorderGUI
             
             // MainForm
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1100, 670);
+            this.ClientSize = new System.Drawing.Size(1100, 750);
             this.Controls.Add(this.panelSettings);
             this.Controls.Add(this.panelMain);
             this.Controls.Add(this.panelLogs);
@@ -430,7 +411,6 @@ namespace MacroRecorderGUI
             this.panelPlayback.ResumeLayout(false);
             this.panelPlayback.PerformLayout();
             this.panelStatus.ResumeLayout(false);
-            this.panelHotkeys.ResumeLayout(false);
             this.panelLogs.ResumeLayout(false);
             this.panelSettings.ResumeLayout(false);
             this.panelMain.ResumeLayout(false);
@@ -450,9 +430,6 @@ namespace MacroRecorderGUI
         private Button btnStopPlayback;
         private Panel panelStatus;
         private Label lblStatus;
-        private Panel panelHotkeys;
-        private Label lblHotkeys;
-        private Label lblHotkeysTitle;
         private Label lblRecordingTitle;
         private Label lblPlaybackTitle;
         private Button btnPauseRecord;
@@ -466,6 +443,7 @@ namespace MacroRecorderGUI
         private Button btnLoadMacroFile;
         private Label lblMacroFile;
         private Button btnSettings;
+        private Button btnSchedulePlayback;
         private Panel panelSettings;
     }
 }
