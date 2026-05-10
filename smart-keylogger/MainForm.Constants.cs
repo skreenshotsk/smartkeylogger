@@ -8,6 +8,7 @@ namespace MacroRecorderGUI
     {
         // Константы для регистрации горячих клавиш
         private const int MOD_NONE = 0x0000;
+        private const int MOD_WIN = 0x0008;
         private const int WM_HOTKEY = 0x0312;
         
         // ID для горячих клавиш
@@ -29,6 +30,9 @@ namespace MacroRecorderGUI
 
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
     }
 }
 

@@ -22,6 +22,7 @@ C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\bin\Debug\net6.0-windows\r
 C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\bin\Debug\net6.0-windows\runtimes\win-arm64\native\uiohook.dll
 C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\bin\Debug\net6.0-windows\runtimes\win-x64\native\uiohook.dll
 C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\bin\Debug\net6.0-windows\runtimes\win-x86\native\uiohook.dll
-C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\obj\Debug\net6.0-windows\smart-keylogger.csproj.CopyComplete
 C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\obj\Debug\net6.0-windows\smart-keylogger.genruntimeconfig.cache
 C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\obj\Debug\net6.0-windows\ref\smart-keylogger.dll
+C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\obj\Debug\net6.0-windows\smart-keylogger.sourcelink.json
+C:\Users\skree\Desktop\smartkeylogger\smart-keylogger\obj\Debug\net6.0-windows\smart-ke.3154C76C.Up2Date

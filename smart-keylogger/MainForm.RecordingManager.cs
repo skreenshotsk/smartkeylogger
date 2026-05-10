@@ -51,7 +51,15 @@ namespace MacroRecorderGUI
                 Console.WriteLine("Запись приостановлена");
             }
             
-            // Не нужно вызывать UpdateUI() здесь, т.к. таймер сам обновляет статус
+            // Обновляем сразу, чтобы кнопка мгновенно меняла текст и цвет.
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(UpdateUI));
+            }
+            else
+            {
+                UpdateUI();
+            }
         }
 
         private async void StartRecording()

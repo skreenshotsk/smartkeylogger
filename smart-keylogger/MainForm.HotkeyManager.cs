@@ -27,17 +27,11 @@ namespace MacroRecorderGUI
         // Состояние для настройки горячих клавиш
         private Button? waitingForHotkeyButton = null;
         private int? waitingForHotkeyId = null;
-        private Keys currentPressedKeys = Keys.None;
-        private Keys maxPressedKeys = Keys.None;
-        private HashSet<Keys> pressedKeysSet = new HashSet<Keys>();
-        private Keys lastNonModifierKey = Keys.None;
+        private DateTime hotkeyCaptureStartedAt = DateTime.MinValue;
 
         private void RegisterGlobalHotkeys()
         {
             UnregisterGlobalHotkeys();
-            
-            // Небольшая задержка после отмены всех горячих клавиш
-            System.Threading.Thread.Sleep(50);
             
             // Используем сохраненные горячие клавиши или значения по умолчанию
             RegisterSingleHotkey(HOTKEY_START_RECORD, 
@@ -71,14 +65,7 @@ namespace MacroRecorderGUI
         
         private void RegisterSingleHotkey(int hotkeyId, Keys key, uint modifier)
         {
-            // Убеждаемся, что старая регистрация отменена (несколько раз для надежности)
-            for (int i = 0; i < 3; i++)
-            {
-                UnregisterHotKey(this.Handle, hotkeyId);
-            }
-            
-            // Небольшая задержка для гарантии, что система обработала отмену
-            System.Threading.Thread.Sleep(50);
+            UnregisterHotKey(this.Handle, hotkeyId);
             
             // Используем KeysToVirtualKey для правильного преобразования
             Console.WriteLine($"DEBUG RegisterSingleHotkey: hotkeyId={hotkeyId}, key={key} (0x{(int)key:X} = {(int)key} decimal), modifier={modifier}");
@@ -91,10 +78,6 @@ namespace MacroRecorderGUI
             {
                 int error = Marshal.GetLastWin32Error();
                 AddLog($"⚠️ Не удалось зарегистрировать горячую клавишу {GetHotkeyActionName(hotkeyId)}: {key} (код ошибки: {error}, vk={vk:X}, mod={modifier})");
-            }
-            else
-            {
-                AddLog($"✅ Горячая клавиша {GetHotkeyActionName(hotkeyId)} успешно зарегистрирована: {key} с модификаторами {modifier} (vk={vk:X})");
             }
         }
         
@@ -178,13 +161,11 @@ namespace MacroRecorderGUI
             // Устанавливаем флаг ожидания нажатия клавиши
             waitingForHotkeyButton = btn;
             waitingForHotkeyId = hotkeyId;
-            currentPressedKeys = Keys.None;
-            maxPressedKeys = Keys.None;
-            lastNonModifierKey = Keys.None;
-            pressedKeysSet.Clear();
+            hotkeyCaptureStartedAt = DateTime.UtcNow;
             
             // Форма должна быть в фокусе для захвата клавиш
             this.KeyPreview = true;
+            this.ActiveControl = null;
             this.Focus();
             this.BringToFront();
             this.Activate();
@@ -197,216 +178,102 @@ namespace MacroRecorderGUI
             // Обрабатываем только если ожидаем настройку горячей клавиши И панель настроек видима
             if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
             {
-                e.Handled = true; // Блокируем дальнейшую обработку
-                
-                // Извлекаем клавишу из события - используем именно ту клавишу, которая была нажата
-                // e.KeyCode содержит код клавиши без модификаторов
-                Keys keyCode = e.KeyCode;
-                Keys modifierKeys = e.KeyData & Keys.Modifiers;
-                
-                // Добавляем не-модификаторную клавишу (используем KeyCode, а не KeyData)
-                if (keyCode != Keys.None && keyCode != Keys.ControlKey && keyCode != Keys.Menu && keyCode != Keys.ShiftKey)
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+
+                // Игнорируем клавишу, которой могли активировать кнопку "изменить"
+                // (обычно Space/Enter в первые миллисекунды после клика/активации).
+                if ((DateTime.UtcNow - hotkeyCaptureStartedAt).TotalMilliseconds < 200 &&
+                    (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter))
                 {
-                    pressedKeysSet.Add(keyCode);
-                    // Сохраняем последнюю нажатую не-модификаторную клавишу
-                    Keys excludedModifiers = Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.ControlKey | Keys.Menu | Keys.ShiftKey;
-                    if ((keyCode & excludedModifiers) == 0)
-                    {
-                        lastNonModifierKey = keyCode;
-                    }
+                    return;
                 }
-                
-                // Добавляем модификаторы как отдельные клавиши (если они есть)
-                if ((modifierKeys & Keys.Control) != 0)
-                    pressedKeysSet.Add(Keys.Control);
-                if ((modifierKeys & Keys.Alt) != 0)
-                    pressedKeysSet.Add(Keys.Alt);
-                if ((modifierKeys & Keys.Shift) != 0)
-                    pressedKeysSet.Add(Keys.Shift);
-                
-                // Обновляем текущие нажатые клавиши
-                currentPressedKeys = Keys.None;
-                foreach (var k in pressedKeysSet)
+
+                if (IsModifierOnlyKey(e.KeyCode))
                 {
-                    currentPressedKeys |= k;
+                    uint modPreview = GetCurrentModifierMask();
+                    string modText = FormatModifierMask(modPreview);
+                    waitingForHotkeyButton.Text = string.IsNullOrEmpty(modText) ? "Нажмите клавишу..." : $"{modText}+...";
+                    return;
                 }
-                
-                // Сохраняем максимальную комбинацию всех одновременно нажатых клавиш
-                if (currentPressedKeys != Keys.None)
-                {
-                    maxPressedKeys = currentPressedKeys; // Обновляем максимальную комбинацию
-                    
-                    // Обновляем текст кнопки в реальном времени
-                    uint modifier = GetModifierFromKeys(currentPressedKeys);
-                    string previewText = FormatKeysToString(currentPressedKeys, modifier);
-                    waitingForHotkeyButton.Text = previewText;
-                }
+
+                uint finalModifier = GetCurrentModifierMask();
+                ApplyHotkeySelection(e.KeyCode, finalModifier);
             }
         }
 
         private void MainForm_KeyUp(object? sender, KeyEventArgs e)
         {
-            // Обрабатываем только если ожидаем настройку горячей клавиши И панель настроек видима
             if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
             {
-                e.Handled = true; // Блокируем дальнейшую обработку
-                
-                // Удаляем клавишу из множества нажатых
-                // Используем KeyCode для точного определения клавиши
-                Keys keyCode = e.KeyCode;
-                Keys releasedModifiers = e.KeyData & Keys.Modifiers;
-                
-                // Удаляем не-модификаторную клавишу
-                if (keyCode != Keys.None && keyCode != Keys.ControlKey && keyCode != Keys.Menu && keyCode != Keys.ShiftKey)
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
+        }
+
+        private void ApplyHotkeySelection(Keys finalKey, uint finalModifier)
+        {
+            if (waitingForHotkeyButton == null || !waitingForHotkeyId.HasValue)
+            {
+                return;
+            }
+
+            bool isSystemKey = systemKeys.Contains(finalKey);
+            if (isSystemKey)
+            {
+                var result = MessageBox.Show(
+                    "Предупреждение: эта клавиша может использоваться системой. Приложение всё равно попробует её зарегистрировать, но часть системных сочетаний Windows может остаться недоступной.\n\nПродолжить?",
+                    "Предупреждение",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.No)
                 {
-                    pressedKeysSet.Remove(keyCode);
-                }
-                
-                // Удаляем модификаторы
-                if ((releasedModifiers & Keys.Control) != 0)
-                    pressedKeysSet.Remove(Keys.Control);
-                if ((releasedModifiers & Keys.Alt) != 0)
-                    pressedKeysSet.Remove(Keys.Alt);
-                if ((releasedModifiers & Keys.Shift) != 0)
-                    pressedKeysSet.Remove(Keys.Shift);
-                
-                // Если все клавиши отпущены - сохраняем горячую клавишу
-                if (pressedKeysSet.Count == 0 && maxPressedKeys != Keys.None)
-                {
-                    // Используем максимальную комбинацию всех одновременно нажатых клавиш
-                    Keys finalCombination = maxPressedKeys;
-                    
-                    // Извлекаем модификаторы
-                    uint finalModifier = GetModifierFromKeys(finalCombination);
-                    
-                    // Используем последнюю нажатую не-модификаторную клавишу
-                    // НО если это модификатор или None, используем текущий KeyCode из события KeyUp
-                    Keys finalKey = lastNonModifierKey;
-                    
-                    // Если lastNonModifierKey не установлен или это модификатор, используем KeyCode из текущего события
-                    Keys excludedModifiers = Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.ControlKey | Keys.Menu | Keys.ShiftKey | Keys.LMenu | Keys.RMenu | Keys.LShiftKey | Keys.RShiftKey | Keys.LControlKey | Keys.RControlKey;
-                    if (finalKey == Keys.None || (finalKey & excludedModifiers) != 0)
-                    {
-                        // Используем KeyCode из события KeyUp (это реальная клавиша, которая была отпущена)
-                        if (keyCode != Keys.None && (keyCode & excludedModifiers) == 0)
-                        {
-                            finalKey = keyCode;
-                        }
-                        else
-                        {
-                            // Если и KeyCode не подходит, извлекаем из комбинации
-                            Keys keysWithoutMods = GetKeyWithoutModifiers(finalCombination);
-                            finalKey = keysWithoutMods;
-                            
-                            // Убираем модификаторы из keysWithoutMods
-                            finalKey &= ~excludedModifiers;
-                            
-                            // Если все еще не нашли, ищем вручную
-                            if (finalKey == Keys.None)
-                            {
-                                for (int i = 255; i >= 1; i--)
-                                {
-                                    Keys testKey = (Keys)i;
-                                    if ((keysWithoutMods & testKey) == testKey && (testKey & excludedModifiers) == 0)
-                                    {
-                                        finalKey = testKey;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // Если все еще None, используем keysWithoutMods как есть
-                            if (finalKey == Keys.None)
-                            {
-                                finalKey = keysWithoutMods;
-                            }
-                        }
-                    }
-                    
-                    // Отладочная информация
-                    Console.WriteLine($"DEBUG: lastNonModifierKey = {lastNonModifierKey}, keyCode = {keyCode}, maxPressedKeys = {maxPressedKeys}, finalKey = {finalKey}, finalCombination = {finalCombination}");
-                    
-                    // Проверяем, является ли клавиша системной
-                    bool isSystemKey = systemKeys.Contains(finalKey);
-                    if (isSystemKey)
-                    {
-                        var result = MessageBox.Show(
-                            "Предупреждение: эта клавиша может использоваться системой, в случае, если она не работает, попробуйте другую клавишу или сочетание клавиш.\n\nПродолжить?",
-                            "Предупреждение",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Warning);
-                        
-                        if (result == DialogResult.No)
-                        {
-                            // Восстанавливаем старое значение
-                            string oldText = FormatKeysToString(
-                                savedHotkeys.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeys[waitingForHotkeyId.Value] : Keys.None,
-                                savedHotkeyModifiers.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeyModifiers[waitingForHotkeyId.Value] : 0);
-                            waitingForHotkeyButton.Text = oldText;
-                            waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
-                            waitingForHotkeyButton = null;
-                            waitingForHotkeyId = null;
-                            currentPressedKeys = Keys.None;
-                            maxPressedKeys = Keys.None;
-                            pressedKeysSet.Clear();
-                            return;
-                        }
-                    }
-                    
-                    // Сохраняем новую горячую клавишу в память ПЕРЕД отменой старой
-                    savedHotkeys[waitingForHotkeyId.Value] = finalKey;
-                    savedHotkeyModifiers[waitingForHotkeyId.Value] = finalModifier;
-                    
-                    // Сохраняем в файл
-                    SaveHotkeysToFile();
-                    
-                    // Регистрируем новую горячую клавишу через RegisterSingleHotkey
-                    // (он сам отменит старую регистрацию перед регистрацией новой)
-                    int hotkeyId = waitingForHotkeyId.Value;
-                    
-                    AddLog($"🔧 Попытка регистрации горячей клавиши {GetHotkeyActionName(hotkeyId)}: key={finalKey}, mod={finalModifier}");
-                    
-                    // Используем RegisterSingleHotkey для единообразной логики регистрации
-                    RegisterSingleHotkey(hotkeyId, finalKey, finalModifier);
-                    
-                    // Преобразуем Keys в строку
-                    string keyString = FormatKeysToString(finalCombination, finalModifier);
-                    
-                    // Обновляем текст кнопки
-                    waitingForHotkeyButton.Text = keyString;
-                    waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
-                    
-                    // Обновляем Tag кнопки
-                    waitingForHotkeyButton.Tag = new { HotkeyId = waitingForHotkeyId.Value, Key = finalKey, Mod = finalModifier };
-                    
-                    AddLog($"⌨️ Установлена горячая клавиша для {GetHotkeyActionName(waitingForHotkeyId.Value)}: {keyString}");
-                    
-                    // ВАЖНО: Сбрасываем состояние ПОСЛЕ сохранения, чтобы горячие клавиши не активировались на главном экране
-                    waitingForHotkeyButton = null;
-                    waitingForHotkeyId = null;
-                    currentPressedKeys = Keys.None;
-                    maxPressedKeys = Keys.None;
-                    lastNonModifierKey = Keys.None;
-                    pressedKeysSet.Clear();
-                    
-                    // Убеждаемся, что KeyPreview выключен после настройки
-                    this.KeyPreview = false;
-                }
-                else if (pressedKeysSet.Count > 0)
-                {
-                    // Обновляем текущие нажатые клавиши (после удаления одной)
-                    currentPressedKeys = Keys.None;
-                    foreach (var k in pressedKeysSet)
-                    {
-                        currentPressedKeys |= k;
-                    }
-                    // Добавляем модификаторы из текущего состояния
-                    if (e.KeyData != Keys.None)
-                    {
-                        currentPressedKeys |= (e.KeyData & Keys.Modifiers);
-                    }
+                    CancelHotkeyCaptureAndRestore();
+                    return;
                 }
             }
+
+            int hotkeyId = waitingForHotkeyId.Value;
+            savedHotkeys[hotkeyId] = finalKey;
+            savedHotkeyModifiers[hotkeyId] = finalModifier;
+            SaveHotkeysToFile();
+
+            AddLog($"🔧 Попытка регистрации горячей клавиши {GetHotkeyActionName(hotkeyId)}: key={finalKey}, mod={finalModifier}");
+            RegisterSingleHotkey(hotkeyId, finalKey, finalModifier);
+
+            string keyString = FormatKeysToString(finalKey, finalModifier);
+            waitingForHotkeyButton.Text = keyString;
+            waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+            waitingForHotkeyButton.Tag = new { HotkeyId = hotkeyId, Key = finalKey, Mod = finalModifier };
+
+            AddLog($"⌨️ Установлена горячая клавиша для {GetHotkeyActionName(hotkeyId)}: {keyString}");
+            UpdateUI();
+            FinishHotkeyCapture();
+        }
+
+        private void CancelHotkeyCaptureAndRestore()
+        {
+            if (waitingForHotkeyButton == null || !waitingForHotkeyId.HasValue)
+            {
+                return;
+            }
+
+            string oldText = FormatKeysToString(
+                savedHotkeys.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeys[waitingForHotkeyId.Value] : Keys.None,
+                savedHotkeyModifiers.ContainsKey(waitingForHotkeyId.Value) ? savedHotkeyModifiers[waitingForHotkeyId.Value] : 0);
+            waitingForHotkeyButton.Text = oldText;
+            waitingForHotkeyButton.BackColor = System.Drawing.Color.White;
+
+            FinishHotkeyCapture();
+        }
+
+        private void FinishHotkeyCapture()
+        {
+            waitingForHotkeyButton = null;
+            waitingForHotkeyId = null;
+            hotkeyCaptureStartedAt = DateTime.MinValue;
+            this.KeyPreview = false;
         }
         
         private string GetHotkeyActionName(int hotkeyId)
@@ -442,6 +309,8 @@ namespace MacroRecorderGUI
                 result += "Alt+";
             if ((mods & 0x0004) != 0) // MOD_SHIFT
                 result += "Shift+";
+            if ((mods & 0x0008) != 0) // MOD_WIN
+                result += "Win+";
             
             Keys key = keyData & ~Keys.Modifiers;
             
@@ -490,6 +359,47 @@ namespace MacroRecorderGUI
             if ((keyData & Keys.Shift) == Keys.Shift)
                 mod |= 0x0004; // MOD_SHIFT
             return mod;
+        }
+
+        private uint GetCurrentModifierMask()
+        {
+            uint mod = MOD_NONE;
+            Keys current = Control.ModifierKeys;
+
+            if ((current & Keys.Control) == Keys.Control)
+                mod |= 0x0002; // MOD_CONTROL
+            if ((current & Keys.Alt) == Keys.Alt)
+                mod |= 0x0001; // MOD_ALT
+            if ((current & Keys.Shift) == Keys.Shift)
+                mod |= 0x0004; // MOD_SHIFT
+            if (IsWinModifierPressed())
+                mod |= 0x0008; // MOD_WIN
+
+            return mod;
+        }
+
+        private bool IsModifierOnlyKey(Keys keyCode)
+        {
+            return keyCode == Keys.ControlKey ||
+                   keyCode == Keys.Menu ||
+                   keyCode == Keys.ShiftKey ||
+                   keyCode == Keys.LWin ||
+                   keyCode == Keys.RWin;
+        }
+
+        private string FormatModifierMask(uint modifierMask)
+        {
+            string result = "";
+            if ((modifierMask & 0x0002) != 0) result += "Ctrl";
+            if ((modifierMask & 0x0001) != 0) result += (result.Length > 0 ? "+Alt" : "Alt");
+            if ((modifierMask & 0x0004) != 0) result += (result.Length > 0 ? "+Shift" : "Shift");
+            if ((modifierMask & 0x0008) != 0) result += (result.Length > 0 ? "+Win" : "Win");
+            return result;
+        }
+
+        private bool IsWinModifierPressed()
+        {
+            return (GetAsyncKeyState(0x5B) & 0x8000) != 0 || (GetAsyncKeyState(0x5C) & 0x8000) != 0;
         }
         
         private Keys GetKeyWithoutModifiers(Keys keyData)
@@ -605,6 +515,7 @@ namespace MacroRecorderGUI
                 // Очищаем сохраненные горячие клавиши
                 savedHotkeys.Clear();
                 savedHotkeyModifiers.Clear();
+                SaveHotkeysToFile();
                 
                 UnregisterGlobalHotkeys();
                 RegisterGlobalHotkeys();

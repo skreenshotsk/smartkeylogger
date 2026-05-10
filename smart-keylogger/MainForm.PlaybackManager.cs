@@ -8,6 +8,11 @@ namespace MacroRecorderGUI
 {
     public partial class MainForm
     {
+        private void TogglePausePlayback()
+        {
+            TogglePausePlayback(true);
+        }
+
         private void UpdatePlaybackTime()
         {
             if (isPlaying && player != null && lblStatus != null && player.PlaybackStarted)
@@ -38,7 +43,7 @@ namespace MacroRecorderGUI
             UpdatePlaybackTime();
         }
 
-        private void TogglePausePlayback()
+        private void TogglePausePlayback(bool propagateToRemotes)
         {
             if (!isPlaying || player == null) return;
             
@@ -66,6 +71,11 @@ namespace MacroRecorderGUI
             else
             {
                 UpdateUI();
+            }
+
+            if (propagateToRemotes)
+            {
+                _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "toggle_pause" });
             }
         }
 
@@ -127,6 +137,23 @@ namespace MacroRecorderGUI
             
             var keyboardLayout = recorder.GetRecordedKeyboardLayout();
             var durationTicks = recorder.GetRecordedDurationTicks();
+            var macroData = new MacroData
+            {
+                Events = events,
+                KeyboardLayout = keyboardLayout?.ToInt64(),
+                DurationTicks = durationTicks
+            };
+            bool runLocal = IsSelfSelected();
+            _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "play", Loop = false, MacroData = macroData });
+
+            if (!runLocal)
+            {
+                AddLog("🌐 Воспроизведение отправлено на выбранные ПК (текущее устройство не выбрано)");
+                isPlaying = false;
+                playbackTimer?.Stop();
+                UpdateUI();
+                return;
+            }
             
             try
             {
@@ -188,6 +215,22 @@ namespace MacroRecorderGUI
                 
                 var keyboardLayout = recorder.GetRecordedKeyboardLayout();
                 var durationTicks = recorder.GetRecordedDurationTicks();
+                var macroData = new MacroData
+                {
+                    Events = events,
+                    KeyboardLayout = keyboardLayout?.ToInt64(),
+                    DurationTicks = durationTicks
+                };
+                bool runLocal = IsSelfSelected();
+                _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "play", Loop = true, MacroData = macroData });
+                if (!runLocal)
+                {
+                    AddLog("🌐 Циклическое воспроизведение отправлено на выбранные ПК (текущее устройство не выбрано)");
+                    isPlaying = false;
+                    playbackTimer?.Stop();
+                    UpdateUI();
+                    return;
+                }
                 
                 // Запускаем задачу для периодического обновления UI во время технической паузы
                 var uiUpdateTask = Task.Run(async () =>
@@ -218,6 +261,11 @@ namespace MacroRecorderGUI
 
         private void StopPlayback()
         {
+            StopPlayback(true);
+        }
+
+        private void StopPlayback(bool propagateToRemotes)
+        {
             // Если ожидается запланированное выполнение, отменяем его
             if (isWaitingForSchedule && !isPlaying)
             {
@@ -227,18 +275,60 @@ namespace MacroRecorderGUI
                 scheduledMacroFile = null;
                 AddLog("❌ Запланированное воспроизведение отменено");
                 UpdateUI();
+                if (propagateToRemotes)
+                {
+                    _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "stop" });
+                }
                 return;
             }
 
-            if (!isPlaying || player == null) return;
+            if (!isPlaying || player == null)
+            {
+                if (propagateToRemotes)
+                {
+                    _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "stop" });
+                }
+                return;
+            }
 
             playbackCancellation?.Cancel();
             player.Stop();
             isPlaying = false;
             AddLog("⏹ Воспроизведение остановлено (`)");
             UpdateUI();
+
+            if (propagateToRemotes)
+            {
+                _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "stop" });
+            }
             
             Console.WriteLine("Воспроизведение остановлено по запросу пользователя");
+        }
+
+        private async void StartRemotePlayback(MacroData macroData, bool loop)
+        {
+            if (isPlaying || isRecording || player == null) return;
+            if (macroData.Events == null || macroData.Events.Count == 0) return;
+
+            isPlaying = true;
+            isWaitingForSchedule = false;
+            playbackCancellation = new System.Threading.CancellationTokenSource();
+            playbackTimer?.Start();
+            AddLog(loop ? "🌐 Получена команда: циклическое воспроизведение" : "🌐 Получена команда: воспроизведение");
+            UpdateUI();
+
+            IntPtr? keyboardLayout = macroData.KeyboardLayout.HasValue ? new IntPtr(macroData.KeyboardLayout.Value) : null;
+            try
+            {
+                await player.PlayEvents(macroData.Events, loop, playbackCancellation.Token, keyboardLayout, macroData.DurationTicks);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
+            }
+
+            isPlaying = false;
+            UpdateUI();
         }
     }
 }

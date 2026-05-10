@@ -37,6 +37,11 @@ namespace MacroRecorderGUI
             this.btnPlay = new System.Windows.Forms.Button();
             this.btnPlayLoop = new System.Windows.Forms.Button();
             this.btnStopPlayback = new System.Windows.Forms.Button();
+            this.lblRemoteTargets = new System.Windows.Forms.Label();
+            this.checkedListRemoteTargets = new System.Windows.Forms.CheckedListBox();
+            this.btnRefreshRemoteTargets = new System.Windows.Forms.Button();
+            this.btnSelectAllRemoteTargets = new System.Windows.Forms.Button();
+            this.btnSelectNoneRemoteTargets = new System.Windows.Forms.Button();
             this.panelStatus = new System.Windows.Forms.Panel();
             this.lblStatus = new System.Windows.Forms.Label();
             this.panelLogs = new System.Windows.Forms.Panel();
@@ -190,12 +195,17 @@ namespace MacroRecorderGUI
             this.panelPlayback.Controls.Add(this.btnPlay);
             this.panelPlayback.Controls.Add(this.btnPlayLoop);
             this.panelPlayback.Controls.Add(this.btnStopPlayback);
+            this.panelPlayback.Controls.Add(this.lblRemoteTargets);
+            this.panelPlayback.Controls.Add(this.checkedListRemoteTargets);
+            this.panelPlayback.Controls.Add(this.btnRefreshRemoteTargets);
+            this.panelPlayback.Controls.Add(this.btnSelectAllRemoteTargets);
+            this.panelPlayback.Controls.Add(this.btnSelectNoneRemoteTargets);
             this.panelPlayback.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelPlayback.Location = new System.Drawing.Point(0, 310);
-            this.panelPlayback.MinimumSize = new System.Drawing.Size(0, 320);
+            this.panelPlayback.MinimumSize = new System.Drawing.Size(0, 430);
             this.panelPlayback.Name = "panelPlayback";
             this.panelPlayback.Padding = new System.Windows.Forms.Padding(30, 15, 30, 15);
-            this.panelPlayback.Size = new System.Drawing.Size(700, 280);
+            this.panelPlayback.Size = new System.Drawing.Size(700, 430);
             this.panelPlayback.TabIndex = 2;
             
             // btnPausePlayback
@@ -315,6 +325,68 @@ namespace MacroRecorderGUI
             this.btnStopPlayback.Text = "⏹ ОСТАНОВИТЬ (`)";
             this.btnStopPlayback.UseVisualStyleBackColor = false;
             this.btnStopPlayback.Click += new System.EventHandler(this.btnStopPlay_Click);
+
+            // lblRemoteTargets
+            this.lblRemoteTargets.AutoSize = true;
+            this.lblRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.lblRemoteTargets.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
+            this.lblRemoteTargets.Location = new System.Drawing.Point(27, 305);
+            this.lblRemoteTargets.Name = "lblRemoteTargets";
+            this.lblRemoteTargets.Size = new System.Drawing.Size(247, 19);
+            this.lblRemoteTargets.TabIndex = 9;
+            this.lblRemoteTargets.Text = "Устройства для синхронизации:";
+
+            // checkedListRemoteTargets
+            this.checkedListRemoteTargets.CheckOnClick = true;
+            this.checkedListRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+            this.checkedListRemoteTargets.FormattingEnabled = true;
+            this.checkedListRemoteTargets.Location = new System.Drawing.Point(30, 330);
+            this.checkedListRemoteTargets.Name = "checkedListRemoteTargets";
+            this.checkedListRemoteTargets.Size = new System.Drawing.Size(640, 58);
+            this.checkedListRemoteTargets.SelectionMode = System.Windows.Forms.SelectionMode.One;
+            this.checkedListRemoteTargets.TabIndex = 10;
+
+            // btnRefreshRemoteTargets
+            this.btnRefreshRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(96)))), ((int)(((byte)(125)))), ((int)(((byte)(139)))));
+            this.btnRefreshRemoteTargets.FlatAppearance.BorderSize = 0;
+            this.btnRefreshRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnRefreshRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnRefreshRemoteTargets.ForeColor = System.Drawing.Color.White;
+            this.btnRefreshRemoteTargets.Location = new System.Drawing.Point(30, 395);
+            this.btnRefreshRemoteTargets.Name = "btnRefreshRemoteTargets";
+            this.btnRefreshRemoteTargets.Size = new System.Drawing.Size(220, 28);
+            this.btnRefreshRemoteTargets.TabIndex = 11;
+            this.btnRefreshRemoteTargets.Text = "⟳ Обновить список устройств";
+            this.btnRefreshRemoteTargets.UseVisualStyleBackColor = false;
+            this.btnRefreshRemoteTargets.Click += new System.EventHandler(this.btnRefreshRemoteTargets_Click);
+
+            // btnSelectAllRemoteTargets
+            this.btnSelectAllRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
+            this.btnSelectAllRemoteTargets.FlatAppearance.BorderSize = 0;
+            this.btnSelectAllRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSelectAllRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnSelectAllRemoteTargets.ForeColor = System.Drawing.Color.White;
+            this.btnSelectAllRemoteTargets.Location = new System.Drawing.Point(260, 395);
+            this.btnSelectAllRemoteTargets.Name = "btnSelectAllRemoteTargets";
+            this.btnSelectAllRemoteTargets.Size = new System.Drawing.Size(180, 28);
+            this.btnSelectAllRemoteTargets.TabIndex = 12;
+            this.btnSelectAllRemoteTargets.Text = "Выбрать все";
+            this.btnSelectAllRemoteTargets.UseVisualStyleBackColor = false;
+            this.btnSelectAllRemoteTargets.Click += new System.EventHandler(this.btnSelectAllRemoteTargets_Click);
+
+            // btnSelectNoneRemoteTargets
+            this.btnSelectNoneRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(158)))), ((int)(((byte)(158)))), ((int)(((byte)(158)))));
+            this.btnSelectNoneRemoteTargets.FlatAppearance.BorderSize = 0;
+            this.btnSelectNoneRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSelectNoneRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnSelectNoneRemoteTargets.ForeColor = System.Drawing.Color.White;
+            this.btnSelectNoneRemoteTargets.Location = new System.Drawing.Point(450, 395);
+            this.btnSelectNoneRemoteTargets.Name = "btnSelectNoneRemoteTargets";
+            this.btnSelectNoneRemoteTargets.Size = new System.Drawing.Size(220, 28);
+            this.btnSelectNoneRemoteTargets.TabIndex = 13;
+            this.btnSelectNoneRemoteTargets.Text = "Снять выделение";
+            this.btnSelectNoneRemoteTargets.UseVisualStyleBackColor = false;
+            this.btnSelectNoneRemoteTargets.Click += new System.EventHandler(this.btnSelectNoneRemoteTargets_Click);
             
             // panelStatus
             this.panelStatus.BackColor = System.Drawing.Color.White;
@@ -395,7 +467,7 @@ namespace MacroRecorderGUI
             
             // MainForm
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1100, 750);
+            this.ClientSize = new System.Drawing.Size(1100, 810);
             this.Controls.Add(this.panelSettings);
             this.Controls.Add(this.panelMain);
             this.Controls.Add(this.panelLogs);
@@ -428,6 +500,11 @@ namespace MacroRecorderGUI
         private Button btnPlay;
         private Button btnPlayLoop;
         private Button btnStopPlayback;
+        private Label lblRemoteTargets;
+        private CheckedListBox checkedListRemoteTargets;
+        private Button btnRefreshRemoteTargets;
+        private Button btnSelectAllRemoteTargets;
+        private Button btnSelectNoneRemoteTargets;
         private Panel panelStatus;
         private Label lblStatus;
         private Label lblRecordingTitle;

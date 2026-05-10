@@ -1,0 +1,86 @@
+@startuml SmartKeyLogger
+
+' Стили
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+skinparam linetype ortho
+
+' Классы данных
+class InputEvent {
+    + eventType : string
+    + timestamp : long
+    + x, y : int
+    + keyCode : int
+    + mouseButton : int
+    + isPressed : bool
+}
+
+class MacroData {
+    + events : List<InputEvent>
+    + keyboardLayout : long?
+    + durationTicks : long?
+}
+
+' Основные классы
+class MacroRecorder {
+    + isRecording : bool
+    + isPaused : bool
+    + recordingDuration : TimeSpan
+    __
+    + StartRecording()
+    + StopRecording()
+    + PauseRecording()
+    + SaveToFile()
+    + LoadFromFile()
+}
+
+class MacroPlayer {
+    + isPaused : bool
+    + currentPlaybackTime : TimeSpan
+    + totalPlaybackTime : TimeSpan
+    __
+    + PlayEvents()
+    + PausePlayback()
+    + Stop()
+}
+
+class MainForm {
+    + isPlaying : bool
+    + isRecording : bool
+    __
+    + InitializeComponents()
+    + UpdateUI()
+    + AddLog()
+}
+
+class ScheduleForm {
+    + selectedDateTime : DateTime
+    + confirmed : bool
+    + InitializeComponent()
+}
+
+class WinAPI <<static>> {
+    + SetCursorPos()
+    + mouse_event()
+    + keybd_event()
+    + GetKeyboardLayout()
+}
+
+' Расположение классов
+MacroData -down-> InputEvent : содержит >
+
+MainForm -down-> MacroRecorder : использует >
+MainForm -down-> MacroPlayer : использует >
+MainForm .right.> ScheduleForm : создает >
+
+MacroRecorder .down.> MacroData : создает/загружает >
+MacroRecorder .right.> WinAPI : использует >
+
+MacroPlayer .down.> InputEvent : воспроизводит >
+MacroPlayer .right.> WinAPI : вызывает >
+
+@enduml

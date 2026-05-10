@@ -105,6 +105,7 @@ namespace MacroRecorderGUI
 
             // Инициализируем ComboBox
             UpdateMacroFilesComboBox();
+            InitializeRemoteSync();
 
             UpdateUI();
         }
@@ -228,43 +229,6 @@ namespace MacroRecorderGUI
                 return true; // Блокируем все клавиши в меню настроек (но не когда настраиваем горячую клавишу)
             }
             
-            // Обработка прямых нажатий клавиш (не глобальные горячие клавиши, они обрабатываются в WndProc)
-            if (isPlaying && (int)keyData == 0xC0)
-            {
-                StopPlayback();
-                return true;
-            }
-            else if (keyData == Keys.F10 && isRecording)
-            {
-                StopRecording();
-                return true;
-            }
-            else if (keyData == Keys.F11 && !isRecording && !isPlaying)
-            {
-                PlayMacro();
-                return true;
-            }
-            else if (keyData == (Keys.F12 | Keys.Control) && !isRecording && !isPlaying)
-            {
-                PlayMacroLoop();
-                return true;
-            }
-            else if (keyData == Keys.F12 && !isRecording && !isPlaying)
-            {
-                PlayMacroLoop();
-                return true;
-            }
-            else if (keyData == Keys.Pause && isRecording && !isPlaying)
-            {
-                TogglePauseRecording();
-                return true;
-            }
-            else if (keyData == Keys.Home && isPlaying && !isRecording)
-            {
-                TogglePausePlayback();
-                return true;
-            }
-            
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
@@ -364,6 +328,7 @@ namespace MacroRecorderGUI
             recordingTimer?.Stop();
             playbackTimer?.Stop();
             UnregisterGlobalHotkeys();
+            DisposeRemoteSync();
             playbackCancellation?.Dispose();
             recordingTimer?.Dispose();
             playbackTimer?.Dispose();
@@ -400,6 +365,7 @@ namespace MacroRecorderGUI
             panelLogs.Visible = false;
             panelSettings.Visible = true;
             panelSettings.BringToFront();
+            UnregisterGlobalHotkeys();
             
             AddLog("⚙️ Открыто меню настроек");
         }
@@ -411,6 +377,8 @@ namespace MacroRecorderGUI
             panelMain.Visible = true;
             panelLogs.Visible = true;
             panelSettings.Visible = false;
+            RegisterGlobalHotkeys();
+            UpdateUI();
             AddLog("◀ Возврат на главный экран");
         }
         

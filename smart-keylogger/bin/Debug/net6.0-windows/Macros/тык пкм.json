@@ -1,0 +1,51 @@
+{
+  "events": [
+    {
+      "eventType": "MouseClick",
+      "timestamp": 9377738,
+      "x": 1280,
+      "y": 716,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": true
+    },
+    {
+      "eventType": "MouseClick",
+      "timestamp": 10027125,
+      "x": 1280,
+      "y": 716,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseClick",
+      "timestamp": 59877180,
+      "x": 1280,
+      "y": 716,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": true
+    },
+    {
+      "eventType": "MouseClick",
+      "timestamp": 60627522,
+      "x": 1280,
+      "y": 716,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 63849880,
+      "x": 1279,
+      "y": 717,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    }
+  ],
+  "keyboardLayout": null,
+  "durationTicks": 109038162
+}

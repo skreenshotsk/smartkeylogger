@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 
 public class MacroPlayer
 {
@@ -96,9 +95,6 @@ public class MacroPlayer
         } 
     }
 
-    [DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
-
     public bool IsPaused => _isPaused;
     public bool PlaybackStarted => _playbackStarted;
     
@@ -188,8 +184,6 @@ public class MacroPlayer
             }
         }
         
-        var keyCheckTask = StartKeyCheck(_internalCancellation.Token);
-
         using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellation.Token))
         {
             try
@@ -197,7 +191,7 @@ public class MacroPlayer
                 Log($"▶ Начато воспроизведение. Длительность записи: {durationText}");
                 Console.WriteLine($"Воспроизведение. Длительность макроса: {durationText}");
                 Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
-                Console.WriteLine("Нажмите ` (Backquote) для остановки, Home для паузы");
+                Console.WriteLine("Остановка/пауза управляются горячими клавишами приложения");
 
                 // Ожидание перед началом
                 for (int i = 0; i < 30; i++)
@@ -207,19 +201,6 @@ public class MacroPlayer
                         Console.WriteLine("Воспроизведение отменено во время задержки");
                         return;
                     }
-                    
-                    // Проверяем паузу во время задержки асинхронно
-                    while (_isPaused && !_stopRequested && !linkedCts.Token.IsCancellationRequested)
-                    {
-                        await Task.Delay(50, linkedCts.Token);
-                    }
-                    
-                    if (_stopRequested || linkedCts.Token.IsCancellationRequested)
-                    {
-                        Console.WriteLine("Воспроизведение отменено во время задержки");
-                        return;
-                    }
-                    
                     await Task.Delay(100);
                 }
 
@@ -326,8 +307,6 @@ public class MacroPlayer
             finally
             {
                 _internalCancellation.Cancel();
-                if (keyCheckTask != null)
-                    await keyCheckTask;
                 _internalCancellation.Dispose();
                 _isPaused = false;
                 _playbackStarted = false;
@@ -367,34 +346,6 @@ public class MacroPlayer
             Log($"▶ Воспроизведение возобновлено");
             Console.WriteLine($"Воспроизведение возобновлено (пауза: {pauseDuration / TimeSpan.TicksPerMillisecond} мс)");
         }
-    }
-
-    private async Task StartKeyCheck(CancellationToken cancellationToken)
-    {
-        await Task.Run(async () =>
-        {
-            const int VK_BACKQUOTE = 0xC0;
-            
-            bool backquotePressed = false;
-
-            while (!cancellationToken.IsCancellationRequested && !_stopRequested)
-            {
-                // Проверка Backquote для остановки
-                short backquoteState = GetAsyncKeyState(VK_BACKQUOTE);
-                bool isBackquotePressed = (backquoteState & 0x8000) != 0;
-
-                if (isBackquotePressed && !backquotePressed)
-                {
-                    Console.WriteLine("Обнаружено нажатие Backquote - остановка воспроизведения");
-                    _stopRequested = true;
-                    _internalCancellation?.Cancel();
-                    break;
-                }
-                backquotePressed = isBackquotePressed;
-
-                await Task.Delay(10, cancellationToken);
-            }
-        }, cancellationToken);
     }
 
     private void ExecuteEvent(InputEvent e)
