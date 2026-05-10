@@ -11,6 +11,7 @@ public class MacroPlayer
     private volatile bool _stopRequested = false;
     private volatile bool _isPaused = false;
     private volatile bool _playbackStarted = false;
+    private volatile bool _skipWarmupDelay = false;
     private CancellationTokenSource? _internalCancellation;
     private List<InputEvent>? _currentEvents;
     private int _currentEventIndex = 0;
@@ -97,6 +98,12 @@ public class MacroPlayer
 
     public bool IsPaused => _isPaused;
     public bool PlaybackStarted => _playbackStarted;
+
+    /// <summary>Пропускает 3 секунды ожидания перед стартом (пауза/горячая клавиша во время отсчёта).</summary>
+    public void SkipStartupDelay()
+    {
+        _skipWarmupDelay = true;
+    }
     
     // Callback для логирования
     private Action<string>? logCallback;
@@ -142,6 +149,7 @@ public class MacroPlayer
         _stopRequested = false;
         _isPaused = false;
         _playbackStarted = false;
+        _skipWarmupDelay = false;
         _internalCancellation = new CancellationTokenSource();
         _currentEvents = events;
         _currentEventIndex = 0;
@@ -201,8 +209,12 @@ public class MacroPlayer
                         Console.WriteLine("Воспроизведение отменено во время задержки");
                         return;
                     }
+                    if (_skipWarmupDelay)
+                        break;
                     await Task.Delay(100);
                 }
+
+                _skipWarmupDelay = false;
 
                 // Таймер воспроизведения начинается здесь
                 _playbackStartTime = DateTime.Now.Ticks;

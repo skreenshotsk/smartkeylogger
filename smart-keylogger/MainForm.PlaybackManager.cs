@@ -47,9 +47,14 @@ namespace MacroRecorderGUI
         {
             if (!isPlaying || player == null) return;
             
-            // Не позволяем паузу во время технической паузы
+            // Во время отсчёта перед стартом — пропуск задержки (только локально, без рассылки)
             if (!player.PlaybackStarted)
             {
+                player.SkipStartupDelay();
+                if (InvokeRequired)
+                    BeginInvoke(new Action(UpdateUI));
+                else
+                    UpdateUI();
                 return;
             }
 
@@ -316,6 +321,19 @@ namespace MacroRecorderGUI
             playbackTimer?.Start();
             AddLog(loop ? "🌐 Получена команда: циклическое воспроизведение" : "🌐 Получена команда: воспроизведение");
             UpdateUI();
+
+            _ = Task.Run(async () =>
+            {
+                while (isPlaying && player != null && !player.PlaybackStarted && playbackCancellation != null &&
+                       !playbackCancellation.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(100);
+                    if (InvokeRequired)
+                        BeginInvoke(new Action(UpdateUI));
+                    else
+                        UpdateUI();
+                }
+            });
 
             IntPtr? keyboardLayout = macroData.KeyboardLayout.HasValue ? new IntPtr(macroData.KeyboardLayout.Value) : null;
             try

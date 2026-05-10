@@ -16,9 +16,10 @@ namespace MacroRecorderGUI
     {
         private const int REMOTE_DISCOVERY_PORT = 40445;
         private const int REMOTE_COMMAND_PORT = 40446;
-        private const int REMOTE_PEER_TTL_SECONDS = 8;
-        private const int REMOTE_PEER_REMOVE_SECONDS = 120;
-        private const string REMOTE_SHARED_KEY = "smartkeylogger-lan-key";
+        /// <summary>Нет объявлений дольше этого интервала — показываем «оффлайн».</summary>
+        private const int REMOTE_PEER_TTL_SECONDS = 18;
+        /// <summary>Удаляем запись пира из списка, если давно не было объявлений.</summary>
+        private const int REMOTE_PEER_REMOVE_SECONDS = 45;
         private const string REMOTE_MULTICAST_GROUP = "239.255.77.77";
         private readonly string remoteSelfId = Guid.NewGuid().ToString("N");
 
@@ -28,7 +29,6 @@ namespace MacroRecorderGUI
         private CancellationTokenSource? remoteSyncCts;
         private readonly Dictionary<string, RemotePeerInfo> remotePeers = new Dictionary<string, RemotePeerInfo>();
         private readonly object remotePeersLock = new object();
-        private readonly HashSet<string> trustedRemotePeerIds = new HashSet<string>();
         private bool remoteTargetsFirstPopulate = true;
 
         private void InitializeRemoteSync()
@@ -124,10 +124,20 @@ namespace MacroRecorderGUI
 
                         lock (remotePeersLock)
                         {
+                            string deviceName = announce.DeviceName ?? "Unknown PC";
+
+                            foreach (var key in remotePeers.Keys.ToList())
+                            {
+                                var p = remotePeers[key];
+                                if (!p.IsSelf && key != announce.Id &&
+                                    string.Equals(p.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
+                                    remotePeers.Remove(key);
+                            }
+
                             remotePeers[announce.Id] = new RemotePeerInfo
                             {
                                 Id = announce.Id,
-                                DeviceName = announce.DeviceName ?? "Unknown PC",
+                                DeviceName = deviceName,
                                 Address = result.RemoteEndPoint.Address.ToString(),
                                 CommandPort = announce.CommandPort <= 0 ? REMOTE_COMMAND_PORT : announce.CommandPort,
                                 IsSelf = false,
@@ -222,12 +232,6 @@ namespace MacroRecorderGUI
                     var command = JsonSerializer.Deserialize<RemoteCommandMessage>(json);
                     if (command == null) return;
 
-                    if (command.AuthToken != REMOTE_SHARED_KEY)
-                    {
-                        AddLog($"🔒 Отклонена удаленная команда с неверным ключом ({client.Client.RemoteEndPoint})");
-                        return;
-                    }
-
                     if (InvokeRequired)
                     {
                         BeginInvoke(new Action(() => ExecuteRemoteCommand(command)));
@@ -246,11 +250,6 @@ namespace MacroRecorderGUI
 
         private void ExecuteRemoteCommand(RemoteCommandMessage command)
         {
-            if (!IsRemoteSenderTrusted(command))
-            {
-                return;
-            }
-
             switch (command.Command)
             {
                 case "play":
@@ -336,9 +335,6 @@ namespace MacroRecorderGUI
                 return;
             }
 
-            message.SenderId = remoteSelfId;
-            message.SenderName = Environment.MachineName;
-            message.AuthToken = REMOTE_SHARED_KEY;
             string json = JsonSerializer.Serialize(message);
             byte[] payload = Encoding.UTF8.GetBytes(json);
 
@@ -372,11 +368,14 @@ namespace MacroRecorderGUI
             }
 
             var checkedIds = new HashSet<string>();
+            var checkedDeviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var item in checkedListRemoteTargets.CheckedItems)
             {
                 if (item is RemoteTargetListItem existing)
                 {
                     checkedIds.Add(existing.Peer.Id);
+                    if (!string.IsNullOrEmpty(existing.Peer.DeviceName))
+                        checkedDeviceNames.Add(existing.Peer.DeviceName);
                 }
             }
 
@@ -399,7 +398,9 @@ namespace MacroRecorderGUI
             {
                 var item = new RemoteTargetListItem(peer);
                 int idx = checkedListRemoteTargets.Items.Add(item);
-                bool shouldCheck = checkedIds.Contains(peer.Id) || (remoteTargetsFirstPopulate && peer.IsSelf && checkedIds.Count == 0);
+                bool shouldCheck = checkedIds.Contains(peer.Id) ||
+                    (!peer.IsSelf && checkedDeviceNames.Contains(peer.DeviceName)) ||
+                    (remoteTargetsFirstPopulate && peer.IsSelf && checkedIds.Count == 0 && checkedDeviceNames.Count == 0);
                 checkedListRemoteTargets.SetItemChecked(idx, shouldCheck);
             }
 
@@ -414,36 +415,6 @@ namespace MacroRecorderGUI
                 return true;
             }
             return DateTime.UtcNow - peer.LastSeenUtc <= TimeSpan.FromSeconds(REMOTE_PEER_TTL_SECONDS);
-        }
-
-        private bool IsRemoteSenderTrusted(RemoteCommandMessage command)
-        {
-            if (string.IsNullOrWhiteSpace(command.SenderId))
-            {
-                return false;
-            }
-
-            if (trustedRemotePeerIds.Contains(command.SenderId))
-            {
-                return true;
-            }
-
-            string senderName = string.IsNullOrWhiteSpace(command.SenderName) ? command.SenderId : command.SenderName;
-            DialogResult result = MessageBox.Show(
-                $"Получена удаленная команда \"{command.Command}\" от устройства \"{senderName}\".\n\nРазрешить управление от этого устройства?",
-                "Подтверждение удаленной команды",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
-            {
-                trustedRemotePeerIds.Add(command.SenderId);
-                AddLog($"🔐 Устройство добавлено в доверенные: {senderName}");
-                return true;
-            }
-
-            AddLog($"🔒 Удаленная команда отклонена: {senderName}");
-            return false;
         }
 
         private async void btnRefreshRemoteTargets_Click(object? sender, EventArgs e)
@@ -622,9 +593,6 @@ namespace MacroRecorderGUI
             public string Command { get; set; } = "";
             public bool Loop { get; set; }
             public MacroData? MacroData { get; set; }
-            public string SenderId { get; set; } = "";
-            public string SenderName { get; set; } = "";
-            public string AuthToken { get; set; } = "";
         }
     }
 }
