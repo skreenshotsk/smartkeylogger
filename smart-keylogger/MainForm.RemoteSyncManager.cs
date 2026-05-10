@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -18,6 +19,7 @@ namespace MacroRecorderGUI
         private const int REMOTE_PEER_TTL_SECONDS = 8;
         private const int REMOTE_PEER_REMOVE_SECONDS = 120;
         private const string REMOTE_SHARED_KEY = "smartkeylogger-lan-key";
+        private const string REMOTE_MULTICAST_GROUP = "239.255.77.77";
         private readonly string remoteSelfId = Guid.NewGuid().ToString("N");
 
         private UdpClient? discoveryListener;
@@ -42,6 +44,7 @@ namespace MacroRecorderGUI
                 StartDiscoveryBroadcaster(remoteSyncCts.Token);
                 StartRemoteCommandListener(remoteSyncCts.Token);
                 StartPeerCleanupLoop(remoteSyncCts.Token);
+                AddLog($"🌐 Сетевая синхронизация запущена: UDP {REMOTE_DISCOVERY_PORT}, TCP {REMOTE_COMMAND_PORT}");
             }
             catch (Exception ex)
             {
@@ -56,7 +59,6 @@ namespace MacroRecorderGUI
                 return;
             }
 
-            checkedListRemoteTargets.SelectionMode = SelectionMode.None;
             checkedListRemoteTargets.SelectionMode = SelectionMode.One;
             checkedListRemoteTargets.SelectedIndexChanged += (_, __) =>
             {
@@ -103,6 +105,9 @@ namespace MacroRecorderGUI
         private void StartDiscoveryListener(CancellationToken token)
         {
             discoveryListener = new UdpClient(new IPEndPoint(IPAddress.Any, REMOTE_DISCOVERY_PORT));
+            discoveryListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            discoveryListener.EnableBroadcast = true;
+            discoveryListener.JoinMulticastGroup(IPAddress.Parse(REMOTE_MULTICAST_GROUP));
             _ = Task.Run(async () =>
             {
                 while (!token.IsCancellationRequested)
@@ -131,6 +136,11 @@ namespace MacroRecorderGUI
                             };
                         }
 
+                        if (announce.MessageType == "announce")
+                        {
+                            _ = SendDiscoveryAckAsync(result.RemoteEndPoint.Address, token);
+                        }
+
                         RefreshRemoteTargetsUi();
                     }
                     catch (OperationCanceledException)
@@ -156,15 +166,7 @@ namespace MacroRecorderGUI
                 {
                     try
                     {
-                        var announce = new RemoteAnnounceMessage
-                        {
-                            Id = remoteSelfId,
-                            DeviceName = Environment.MachineName,
-                            CommandPort = REMOTE_COMMAND_PORT
-                        };
-
-                        byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(announce));
-                        await discoveryBroadcaster.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, REMOTE_DISCOVERY_PORT));
+                        await BroadcastDiscoveryOnce(token);
                         await Task.Delay(2000, token);
                     }
                     catch (OperationCanceledException)
@@ -446,7 +448,11 @@ namespace MacroRecorderGUI
 
         private async void btnRefreshRemoteTargets_Click(object? sender, EventArgs e)
         {
-            await BroadcastDiscoveryOnce();
+            if (remoteSyncCts == null)
+            {
+                return;
+            }
+            await BroadcastDiscoveryOnce(remoteSyncCts.Token);
             RefreshRemoteTargetsUi();
         }
 
@@ -470,7 +476,7 @@ namespace MacroRecorderGUI
             checkedListRemoteTargets.ClearSelected();
         }
 
-        private async Task BroadcastDiscoveryOnce()
+        private async Task BroadcastDiscoveryOnce(CancellationToken token)
         {
             if (discoveryBroadcaster == null)
             {
@@ -481,11 +487,102 @@ namespace MacroRecorderGUI
             {
                 Id = remoteSelfId,
                 DeviceName = Environment.MachineName,
-                CommandPort = REMOTE_COMMAND_PORT
+                CommandPort = REMOTE_COMMAND_PORT,
+                MessageType = "announce"
             };
 
             byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(announce));
-            await discoveryBroadcaster.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, REMOTE_DISCOVERY_PORT));
+            var endpoints = GetDiscoveryEndpoints();
+            foreach (var endpoint in endpoints)
+            {
+                try
+                {
+                    await discoveryBroadcaster.SendAsync(payload, payload.Length, endpoint);
+                }
+                catch
+                {
+                    // continue with other endpoints
+                }
+            }
+
+            await Task.Delay(100, token);
+        }
+
+        private async Task SendDiscoveryAckAsync(IPAddress targetAddress, CancellationToken token)
+        {
+            if (discoveryBroadcaster == null) return;
+
+            var ack = new RemoteAnnounceMessage
+            {
+                Id = remoteSelfId,
+                DeviceName = Environment.MachineName,
+                CommandPort = REMOTE_COMMAND_PORT,
+                MessageType = "ack"
+            };
+
+            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(ack));
+            try
+            {
+                await discoveryBroadcaster.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, REMOTE_DISCOVERY_PORT));
+                await Task.Delay(10, token);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private List<IPEndPoint> GetDiscoveryEndpoints()
+        {
+            var endpoints = new List<IPEndPoint>
+            {
+                new IPEndPoint(IPAddress.Broadcast, REMOTE_DISCOVERY_PORT),
+                new IPEndPoint(IPAddress.Parse(REMOTE_MULTICAST_GROUP), REMOTE_DISCOVERY_PORT)
+            };
+
+            foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (ni.OperationalStatus != OperationalStatus.Up)
+                {
+                    continue;
+                }
+
+                if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                {
+                    continue;
+                }
+
+                var ipProps = ni.GetIPProperties();
+                foreach (var uni in ipProps.UnicastAddresses)
+                {
+                    if (uni.Address.AddressFamily != AddressFamily.InterNetwork || uni.IPv4Mask == null)
+                    {
+                        continue;
+                    }
+
+                    IPAddress broadcast = GetBroadcastAddress(uni.Address, uni.IPv4Mask);
+                    endpoints.Add(new IPEndPoint(broadcast, REMOTE_DISCOVERY_PORT));
+                }
+            }
+
+            return endpoints
+                .GroupBy(e => $"{e.Address}:{e.Port}")
+                .Select(g => g.First())
+                .ToList();
+        }
+
+        private static IPAddress GetBroadcastAddress(IPAddress address, IPAddress subnetMask)
+        {
+            byte[] ipBytes = address.GetAddressBytes();
+            byte[] maskBytes = subnetMask.GetAddressBytes();
+            byte[] broadcastBytes = new byte[ipBytes.Length];
+
+            for (int i = 0; i < ipBytes.Length; i++)
+            {
+                broadcastBytes[i] = (byte)(ipBytes[i] | (maskBytes[i] ^ 255));
+            }
+
+            return new IPAddress(broadcastBytes);
         }
 
         private sealed class RemotePeerInfo
@@ -517,6 +614,7 @@ namespace MacroRecorderGUI
             public string Id { get; set; } = "";
             public string DeviceName { get; set; } = "";
             public int CommandPort { get; set; }
+            public string MessageType { get; set; } = "announce";
         }
 
         private sealed class RemoteCommandMessage

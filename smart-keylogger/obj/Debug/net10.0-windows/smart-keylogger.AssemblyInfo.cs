@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("smart-keylogger")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a88f997ac08d5b049aaa5a0a7b9d4eb50788e76")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b7270c2b026e8d83c11922af6baf18a3b4a3e51d")]
 [assembly: System.Reflection.AssemblyProductAttribute("smart-keylogger")]
 [assembly: System.Reflection.AssemblyTitleAttribute("smart-keylogger")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
