@@ -226,10 +226,38 @@ namespace MacroRecorderGUI
             // Блокируем обработку клавиш только если открыто меню настроек И мы НЕ ожидаем настройку
             if (panelSettings != null && panelSettings.Visible)
             {
-                return true; // Блокируем все клавиши в меню настроек (но не когда настраиваем горячую клавишу)
+                // Иначе нельзя вводить текст в TextBox / RichTextBox и т.п. (переименование макроса и др.)
+                if (IsTextEditingControlFocused())
+                {
+                    return base.ProcessCmdKey(ref msg, keyData);
+                }
+                return true; // Блокируем прочие клавиши в меню настроек
             }
             
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private bool IsTextEditingControlFocused()
+        {
+            Control? c = ActiveControl;
+            if (c is TextBoxBase)
+            {
+                return true;
+            }
+            if (c is ComboBox cb && cb.DropDownStyle != ComboBoxStyle.DropDownList)
+            {
+                return true;
+            }
+            if (c is ContainerControl container && container.ActiveControl is TextBoxBase)
+            {
+                return true;
+            }
+            if (c is ContainerControl container2 && container2.ActiveControl is ComboBox cb2 &&
+                cb2.DropDownStyle != ComboBoxStyle.DropDownList)
+            {
+                return true;
+            }
+            return false;
         }
 
         // Обработчики событий UI
