@@ -1,4 +1,3 @@
-// MainForm.ScheduleManager.cs
 using System;
 using System.IO;
 using System.Windows.Forms;
@@ -13,7 +12,6 @@ namespace MacroRecorderGUI
             {
                 if (DateTime.Now >= scheduledDateTime.Value)
                 {
-                    // Время наступило - запускаем воспроизведение
                     scheduleTimer?.Stop();
                     isWaitingForSchedule = false;
                     currentMacroFile = scheduledMacroFile;
@@ -25,7 +23,6 @@ namespace MacroRecorderGUI
                 }
                 else
                 {
-                    // Обновляем статус
                     if (lblStatus != null && !isRecording && !isPlaying)
                     {
                         string dateStr = scheduledDateTime.Value.ToString("dd.MM.yyyy");

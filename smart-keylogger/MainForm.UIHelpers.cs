@@ -1,4 +1,3 @@
-// MainForm.UIHelpers.cs
 using System;
 using System.Windows.Forms;
 
@@ -36,10 +35,8 @@ namespace MacroRecorderGUI
 
         private void UpdateStatusLabel()
         {
-            // Обновляем статус (если не в режиме записи)
             if (!isRecording && !isPlaying && lblStatus != null)
             {
-                // Если ожидается запланированное выполнение, статус уже обновляется в ScheduleTimer_Tick
                 if (!isWaitingForSchedule)
                 {
                     lblStatus.Text = "● ГОТОВ К РАБОТЕ";
@@ -53,23 +50,18 @@ namespace MacroRecorderGUI
         {
             ApplyDynamicHotkeyTexts();
 
-            // В режиме ожидания все кнопки недоступны кроме остановки
             bool isWaitingMode = isWaitingForSchedule && !isPlaying && !isRecording;
             
-            // Проверяем наличие выбранного файла через GetSelectedMacroFile
             bool hasSelectedFile = !string.IsNullOrEmpty(GetSelectedMacroFile());
             
-            // Запись
             bool canRecord = !isRecording && !isPlaying && !isWaitingMode;
             bool canStopRecord = isRecording && !isPlaying;
             bool canPauseRecord = isRecording && !isPlaying;
 
-            // Воспроизведение
             bool canPlay = !isRecording && !isPlaying && !isWaitingMode && hasSelectedFile;
             bool canPlayLoop = !isRecording && !isPlaying && !isWaitingMode && hasSelectedFile;
             bool canStopPlayback = isPlaying && !isRecording || isWaitingMode;
             bool canSchedulePlayback = !isRecording && !isPlaying && !isWaitingMode && hasSelectedFile;
-            // Пауза доступна всё время воспроизведения (включая отсчёт перед стартом — тогда действует как «пропустить отсчёт»)
             bool canPausePlayback = isPlaying && !isRecording && player != null;
 
             UpdateButtonAppearance(btnStartRecord, canRecord);
@@ -80,7 +72,6 @@ namespace MacroRecorderGUI
             UpdateButtonAppearance(btnStopPlayback, canStopPlayback);
             UpdateButtonAppearance(btnPausePlayback, canPausePlayback);
             
-            // Кнопка планировщика - фиолетовая, не меняем цвет
             if (btnSchedulePlayback != null)
             {
                 btnSchedulePlayback.Enabled = canSchedulePlayback;
@@ -91,7 +82,6 @@ namespace MacroRecorderGUI
                 }
                 else
                 {
-                    // Возвращаем оригинальный фиолетовый цвет
                     btnSchedulePlayback.BackColor = System.Drawing.Color.FromArgb(156, 39, 176);
                     btnSchedulePlayback.ForeColor = System.Drawing.Color.White;
                 }
@@ -100,18 +90,17 @@ namespace MacroRecorderGUI
             string pauseRecordHotkey = GetHotkeyText(HOTKEY_PAUSE_RECORD, Keys.Pause, MOD_NONE);
             string pausePlaybackHotkey = GetHotkeyText(HOTKEY_PAUSE_PLAYBACK, Keys.Home, MOD_NONE);
 
-            // Обновляем текст кнопки паузы записи в зависимости от состояния
             if (recorder != null && isRecording)
             {
                 if (recorder.IsPaused)
                 {
                     btnPauseRecord.Text = $"▶ ПРОДОЛЖИТЬ ЗАПИСЬ ({pauseRecordHotkey})";
-                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(76, 175, 80); // Зеленый для продолжения
+                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(76, 175, 80);
                 }
                 else
                 {
                     btnPauseRecord.Text = $"⏸ ПАУЗА ЗАПИСИ ({pauseRecordHotkey})";
-                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(255, 152, 0); // Оранжевый для паузы
+                    btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(255, 152, 0);
                 }
             }
             else
@@ -119,7 +108,6 @@ namespace MacroRecorderGUI
                 btnPauseRecord.Text = $"⏸ ПАУЗА ЗАПИСИ ({pauseRecordHotkey})";
             }
 
-            // Обновляем текст кнопки паузы воспроизведения в зависимости от состояния (отсчёт перед стартом — тот же вид, что при воспроизведении)
             if (player != null && isPlaying)
             {
                 if (!player.PlaybackStarted)
@@ -130,12 +118,12 @@ namespace MacroRecorderGUI
                 else if (player.IsPaused)
                 {
                     btnPausePlayback.Text = $"▶ ПРОДОЛЖИТЬ ВОСПРОИЗВЕДЕНИЕ ({pausePlaybackHotkey})";
-                    btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(76, 175, 80); // Зеленый для продолжения
+                    btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(76, 175, 80);
                 }
                 else
                 {
                     btnPausePlayback.Text = $"⏸ ПАУЗА ВОСПРОИЗВЕДЕНИЯ ({pausePlaybackHotkey})";
-                    btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(255, 152, 0); // Оранжевый для паузы
+                    btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(255, 152, 0);
                 }
             }
             else

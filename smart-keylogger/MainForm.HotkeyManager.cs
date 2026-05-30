@@ -1,4 +1,3 @@
-// MainForm.HotkeyManager.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,11 +8,9 @@ namespace MacroRecorderGUI
 {
     public partial class MainForm
     {
-        // Сохраненные горячие клавиши
         private Dictionary<int, Keys> savedHotkeys = new Dictionary<int, Keys>();
         private Dictionary<int, uint> savedHotkeyModifiers = new Dictionary<int, uint>();
 
-        // Клавиши, которые могут использоваться системой
         private HashSet<Keys> systemKeys = new HashSet<Keys>
         {
             Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F6, Keys.F7, Keys.F8,
@@ -24,7 +21,6 @@ namespace MacroRecorderGUI
             Keys.LWin, Keys.RWin, Keys.Apps
         };
 
-        // Состояние для настройки горячих клавиш
         private Button? waitingForHotkeyButton = null;
         private int? waitingForHotkeyId = null;
         private DateTime hotkeyCaptureStartedAt = DateTime.MinValue;
@@ -33,7 +29,6 @@ namespace MacroRecorderGUI
         {
             UnregisterGlobalHotkeys();
             
-            // Используем сохраненные горячие клавиши или значения по умолчанию
             RegisterSingleHotkey(HOTKEY_START_RECORD, 
                 savedHotkeys.ContainsKey(HOTKEY_START_RECORD) ? savedHotkeys[HOTKEY_START_RECORD] : Keys.F9,
                 savedHotkeyModifiers.ContainsKey(HOTKEY_START_RECORD) ? savedHotkeyModifiers[HOTKEY_START_RECORD] : MOD_NONE);
@@ -48,7 +43,7 @@ namespace MacroRecorderGUI
             
             RegisterSingleHotkey(HOTKEY_PLAY_LOOP,
                 savedHotkeys.ContainsKey(HOTKEY_PLAY_LOOP) ? savedHotkeys[HOTKEY_PLAY_LOOP] : Keys.F12,
-                savedHotkeyModifiers.ContainsKey(HOTKEY_PLAY_LOOP) ? savedHotkeyModifiers[HOTKEY_PLAY_LOOP] : 0x0002); // MOD_CONTROL
+                savedHotkeyModifiers.ContainsKey(HOTKEY_PLAY_LOOP) ? savedHotkeyModifiers[HOTKEY_PLAY_LOOP] : 0x0002);
             
             RegisterSingleHotkey(HOTKEY_STOP_PLAY,
                 savedHotkeys.ContainsKey(HOTKEY_STOP_PLAY) ? savedHotkeys[HOTKEY_STOP_PLAY] : (Keys)0xC0,
@@ -66,14 +61,8 @@ namespace MacroRecorderGUI
         private void RegisterSingleHotkey(int hotkeyId, Keys key, uint modifier)
         {
             UnregisterHotKey(this.Handle, hotkeyId);
-            
-            // Используем KeysToVirtualKey для правильного преобразования
-            Console.WriteLine($"DEBUG RegisterSingleHotkey: hotkeyId={hotkeyId}, key={key} (0x{(int)key:X} = {(int)key} decimal), modifier={modifier}");
             uint vk = KeysToVirtualKey(key);
-            Console.WriteLine($"DEBUG RegisterSingleHotkey: после KeysToVirtualKey vk={vk:X} ({vk} decimal)");
-            
             bool result = RegisterHotKey(this.Handle, hotkeyId, modifier, vk);
-            Console.WriteLine($"Hotkey {hotkeyId} ({key}, mod={modifier}, vk={vk:X}) регистрация: {result}");
             if (!result)
             {
                 int error = Marshal.GetLastWin32Error();
@@ -83,49 +72,40 @@ namespace MacroRecorderGUI
         
         private uint KeysToVirtualKey(Keys key)
         {
-            // Убираем модификаторы, оставляя только саму клавишу (нижние 16 бит)
             uint vk = (uint)((int)key & 0xFFFF);
             
-            // Если vk == 0 после удаления модификаторов, значит были только модификаторы
-            // Пробуем убрать модификаторы через GetKeyWithoutModifiers
             if (vk == 0)
             {
                 Keys cleanKey = GetKeyWithoutModifiers(key);
                 vk = (uint)((int)cleanKey & 0xFFFF);
             }
             
-            // Специальные клавиши с явным указанием VK кода
-            // Проверяем исходный key (нижние 16 бит)
             int keyCode = (int)key & 0xFFFF;
             
             if (keyCode == 0xC0 || key == Keys.Oemtilde) 
-                vk = VK_BACKQUOTE; // 0xC0
+                vk = VK_BACKQUOTE;
             else if (keyCode == 0x13 || key == Keys.Pause) 
-                vk = VK_PAUSE; // 0x13
+                vk = VK_PAUSE;
             else if (keyCode == 0x24 || key == Keys.Home) 
-                vk = VK_HOME; // 0x24
+                vk = VK_HOME;
             else if (keyCode == 0x23 || key == Keys.End) 
-                vk = 0x23; // VK_END
+                vk = 0x23;
             else if (keyCode == 0x21 || key == Keys.PageUp || key == Keys.Prior) 
-                vk = 0x21; // VK_PRIOR
+                vk = 0x21;
             else if (keyCode == 0x22 || key == Keys.PageDown || key == Keys.Next) 
-                vk = 0x22; // VK_NEXT
+                vk = 0x22;
             else if (keyCode == 0x2D || key == Keys.Insert) 
-                vk = 0x2D; // VK_INSERT
+                vk = 0x2D;
             else if (keyCode == 0x2E || key == Keys.Delete) 
-                vk = 0x2E; // VK_DELETE
+                vk = 0x2E;
             else if (keyCode == 0x03 || key == Keys.Cancel)
-                vk = 0x03; // VK_CANCEL (Ctrl+Break)
-            // Для F-клавиш (F1-F12: 0x70-0x7B) и остальных клавиш vk уже установлен выше через нижние 16 бит
+                vk = 0x03;
             
-            // Если получили пробел (0x20) для F-клавиши, это ошибка - возвращаем исходный код
             if (vk == 0x20 && (keyCode >= 0x70 && keyCode <= 0x7B))
             {
-                Console.WriteLine($"ERROR: KeysToVirtualKey получил пробел для F-клавиши! key={key} (0x{(int)key:X}), keyCode={keyCode:X}, используем keyCode как vk");
                 vk = (uint)keyCode;
             }
-            
-            Console.WriteLine($"DEBUG KeysToVirtualKey: key={key} (0x{(int)key:X}), keyCode={keyCode:X}, vk={vk:X} ({vk} decimal)");
+
             return vk;
         }
 
@@ -149,21 +129,18 @@ namespace MacroRecorderGUI
 
         private void ChangeHotkey(Button btn, int hotkeyId)
         {
-            // ВАЖНО: Разрешаем изменение горячей клавиши ТОЛЬКО если панель настроек видима
             if (panelSettings == null || !panelSettings.Visible)
             {
-                return; // Не выполняем изменение, если панель настроек не видима
+                return;
             }
             
             btn.Text = "Нажмите клавишу...";
             btn.BackColor = System.Drawing.Color.FromArgb(255, 235, 59);
             
-            // Устанавливаем флаг ожидания нажатия клавиши
             waitingForHotkeyButton = btn;
             waitingForHotkeyId = hotkeyId;
             hotkeyCaptureStartedAt = DateTime.UtcNow;
             
-            // Форма должна быть в фокусе для захвата клавиш
             this.KeyPreview = true;
             this.ActiveControl = null;
             this.Focus();
@@ -175,14 +152,11 @@ namespace MacroRecorderGUI
 
         private void MainForm_KeyDown(object? sender, KeyEventArgs e)
         {
-            // Обрабатываем только если ожидаем настройку горячей клавиши И панель настроек видима
             if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
 
-                // Игнорируем клавишу, которой могли активировать кнопку "изменить"
-                // (обычно Space/Enter в первые миллисекунды после клика/активации).
                 if ((DateTime.UtcNow - hotkeyCaptureStartedAt).TotalMilliseconds < 200 &&
                     (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter))
                 {
@@ -295,26 +269,23 @@ namespace MacroRecorderGUI
         {
             string result = "";
             
-            // Используем modifier если он указан, иначе извлекаем из keyData
             uint mods = modifier;
             if (mods == 0)
             {
                 mods = GetModifierFromKeys(keyData);
             }
             
-            // Проверяем модификаторы
-            if ((mods & 0x0002) != 0) // MOD_CONTROL
+            if ((mods & 0x0002) != 0)
                 result += "Ctrl+";
-            if ((mods & 0x0001) != 0) // MOD_ALT
+            if ((mods & 0x0001) != 0)
                 result += "Alt+";
-            if ((mods & 0x0004) != 0) // MOD_SHIFT
+            if ((mods & 0x0004) != 0)
                 result += "Shift+";
-            if ((mods & 0x0008) != 0) // MOD_WIN
+            if ((mods & 0x0008) != 0)
                 result += "Win+";
             
             Keys key = keyData & ~Keys.Modifiers;
             
-            // Преобразуем клавишу в строку
             if (key >= Keys.F1 && key <= Keys.F12)
             {
                 result += key.ToString();
@@ -334,7 +305,6 @@ namespace MacroRecorderGUI
             else
             {
                 string keyStr = key.ToString();
-                // Убираем префикс "D" для цифровых клавиш
                 if (keyStr.StartsWith("D") && keyStr.Length == 2 && char.IsDigit(keyStr[1]))
                 {
                     result += keyStr[1];
@@ -351,13 +321,12 @@ namespace MacroRecorderGUI
         private uint GetModifierFromKeys(Keys keyData)
         {
             uint mod = MOD_NONE;
-            // Поддерживаем комбинации модификаторов
             if ((keyData & Keys.Control) == Keys.Control)
-                mod |= 0x0002; // MOD_CONTROL
+                mod |= 0x0002;
             if ((keyData & Keys.Alt) == Keys.Alt)
-                mod |= 0x0001; // MOD_ALT
+                mod |= 0x0001;
             if ((keyData & Keys.Shift) == Keys.Shift)
-                mod |= 0x0004; // MOD_SHIFT
+                mod |= 0x0004;
             return mod;
         }
 
@@ -367,13 +336,13 @@ namespace MacroRecorderGUI
             Keys current = Control.ModifierKeys;
 
             if ((current & Keys.Control) == Keys.Control)
-                mod |= 0x0002; // MOD_CONTROL
+                mod |= 0x0002;
             if ((current & Keys.Alt) == Keys.Alt)
-                mod |= 0x0001; // MOD_ALT
+                mod |= 0x0001;
             if ((current & Keys.Shift) == Keys.Shift)
-                mod |= 0x0004; // MOD_SHIFT
+                mod |= 0x0004;
             if (IsWinModifierPressed())
-                mod |= 0x0008; // MOD_WIN
+                mod |= 0x0008;
 
             return mod;
         }
@@ -404,8 +373,6 @@ namespace MacroRecorderGUI
         
         private Keys GetKeyWithoutModifiers(Keys keyData)
         {
-            // Keys.Modifiers включает Control, Alt, Shift, но может не включать все модификаторы
-            // Убираем все возможные модификаторы, чтобы получить чистую клавишу
             return keyData & ~(Keys.Control | Keys.Alt | Keys.Shift | Keys.LWin | Keys.RWin | Keys.Modifiers);
         }
         
@@ -451,7 +418,6 @@ namespace MacroRecorderGUI
                 string json = File.ReadAllText(hotkeysPath);
                 var hotkeyData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
                 
-                // Загружаем клавиши
                 if (hotkeyData.TryGetProperty("Keys", out var keysElement))
                 {
                     foreach (var prop in keysElement.EnumerateObject())
@@ -461,30 +427,23 @@ namespace MacroRecorderGUI
                             int keyValue = prop.Value.GetInt32();
                             Keys loadedKey = (Keys)keyValue;
                             
-                            // Проверяем, что это не пробел (0x20 или Keys.Space) для HOTKEY_START_RECORD
                             if (hotkeyId == HOTKEY_START_RECORD && (loadedKey == Keys.Space || keyValue == 0x20))
                             {
-                                // Игнорируем пробел, используем значение по умолчанию F9
                                 AddLog($"⚠️ Обнаружен пробел для начала записи, заменяем на F9");
                                 continue;
                             }
                             
-                            // Проверяем, что это не пробел (0x20 или Keys.Space) для HOTKEY_PLAY
                             if (hotkeyId == HOTKEY_PLAY && (loadedKey == Keys.Space || keyValue == 0x20))
                             {
-                                // Игнорируем пробел, используем значение по умолчанию F11
                                 AddLog($"⚠️ Обнаружен пробел для воспроизведения, заменяем на F11");
                                 continue;
                             }
                             
-                            // Логируем загруженное значение для отладки
-                            Console.WriteLine($"DEBUG LoadHotkeysFromFile: hotkeyId={hotkeyId}, keyValue={keyValue} (0x{keyValue:X}), loadedKey={loadedKey}");
                             savedHotkeys[hotkeyId] = loadedKey;
                         }
                     }
                 }
                 
-                // Загружаем модификаторы
                 if (hotkeyData.TryGetProperty("Modifiers", out var modsElement))
                 {
                     foreach (var prop in modsElement.EnumerateObject())
@@ -512,7 +471,6 @@ namespace MacroRecorderGUI
                 
             if (result == DialogResult.Yes)
             {
-                // Очищаем сохраненные горячие клавиши
                 savedHotkeys.Clear();
                 savedHotkeyModifiers.Clear();
                 SaveHotkeysToFile();
@@ -520,7 +478,7 @@ namespace MacroRecorderGUI
                 UnregisterGlobalHotkeys();
                 RegisterGlobalHotkeys();
                 AddLog("🔄 Горячие клавиши сброшены к настройкам по умолчанию");
-                ShowHotkeysSettings(); // Обновляем UI
+                ShowHotkeysSettings();
             }
         }
     }

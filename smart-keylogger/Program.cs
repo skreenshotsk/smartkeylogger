@@ -1,6 +1,4 @@
-﻿// Program.cs
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using System.Windows.Forms;
 
 namespace MacroRecorderGUI

@@ -1,4 +1,3 @@
-// MainForm.MacroFileManager.cs - Управление файлами макросов
 using System;
 using System.IO;
 using System.Linq;

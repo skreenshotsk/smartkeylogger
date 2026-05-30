@@ -32,7 +32,6 @@ namespace MacroRecorderGUI
             this.StartPosition = FormStartPosition.CenterParent;
             this.BackColor = System.Drawing.Color.White;
 
-            // Заголовок
             Label lblTitle = new Label
             {
                 Text = "Выберите дату и время выполнения:",
@@ -43,7 +42,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(lblTitle);
 
-            // Дата - День
             Label lblDay = new Label
             {
                 Text = "День:",
@@ -65,7 +63,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(numDay);
 
-            // Дата - Месяц
             Label lblMonth = new Label
             {
                 Text = "Месяц:",
@@ -87,7 +84,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(numMonth);
 
-            // Дата - Год
             Label lblYear = new Label
             {
                 Text = "Год:",
@@ -109,7 +105,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(numYear);
 
-            // Время - Часы
             Label lblHour = new Label
             {
                 Text = "Часы:",
@@ -131,7 +126,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(numHour);
 
-            // Время - Минуты
             Label lblMinute = new Label
             {
                 Text = "Минуты:",
@@ -153,7 +147,6 @@ namespace MacroRecorderGUI
             };
             this.Controls.Add(numMinute);
 
-            // Кнопка Подтвердить
             btnConfirm = new Button
             {
                 Text = "Подтвердить",
@@ -173,7 +166,6 @@ namespace MacroRecorderGUI
                 this.Controls.Add(btnConfirm);
             }
 
-            // Кнопка Отмена
             btnCancel = new Button
             {
                 Text = "Отмена",
@@ -208,7 +200,6 @@ namespace MacroRecorderGUI
 
                 SelectedDateTime = new DateTime(year, month, day, hour, minute, 0);
                 
-                // Проверяем, что дата не в прошлом
                 if (SelectedDateTime <= DateTime.Now)
                 {
                     MessageBox.Show("Выбранная дата и время должны быть в будущем!", "Ошибка", 

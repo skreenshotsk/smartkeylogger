@@ -12,8 +12,8 @@ public class InputEvent
 public class MacroData
 {
     public List<InputEvent> Events { get; set; } = new List<InputEvent>();
-    public long? KeyboardLayout { get; set; } // Сохраняем как long для JSON сериализации
-    public long? DurationTicks { get; set; } // Длительность записи в тиках для согласованности с логами
+    public long? KeyboardLayout { get; set; }
+    public long? DurationTicks { get; set; }
 }
 
 [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]

@@ -1,4 +1,3 @@
-// MacroPlayer.cs
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -6,7 +5,6 @@ using System.Threading.Tasks;
 
 public class MacroPlayer
 {
-    private readonly Random _random = new Random();
     private POINT _lastMousePos = new POINT { X = 0, Y = 0 };
     private volatile bool _stopRequested = false;
     private volatile bool _isPaused = false;
@@ -19,17 +17,15 @@ public class MacroPlayer
     private long _totalPauseDuration = 0;
     private DateTime _pauseStartTime;
     private ManualResetEventSlim _pauseWaitHandle = new ManualResetEventSlim(true);
-    private long? _savedTotalDurationTicks = null; // Сохраненная длительность записи для согласованности
+    private long? _savedTotalDurationTicks = null;
 
-    // свойства для таймера воспроизведения
-    public TimeSpan CurrentPlaybackTime 
-    { 
-        get 
+    public TimeSpan CurrentPlaybackTime
+    {
+        get
         {
-            if (!_playbackStarted || _currentEvents == null || _currentEvents.Count == 0) 
+            if (!_playbackStarted || _currentEvents == null || _currentEvents.Count == 0)
                 return TimeSpan.Zero;
-            
-            // Определяем общую длительность - используем сохраненную если доступна
+
             long totalEventDuration;
             if (_savedTotalDurationTicks.HasValue && _savedTotalDurationTicks.Value > 0)
             {
@@ -37,87 +33,75 @@ public class MacroPlayer
             }
             else
             {
-                // Fallback: вычисляем из событий
                 var sortedEvents = new List<InputEvent>(_currentEvents);
                 sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-                
                 long startEventTime = sortedEvents[0].Timestamp;
                 long endEventTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
                 totalEventDuration = endEventTime - startEventTime;
             }
-            
+
             if (totalEventDuration <= 0)
                 return TimeSpan.Zero;
-            
+
             long currentElapsed;
-            
             if (_isPaused)
             {
-                // На паузе - время на момент паузы
                 currentElapsed = _pauseStartTime.Ticks - _playbackStartTime - _totalPauseDuration;
             }
             else
             {
-                // Воспроизведение идет
                 currentElapsed = DateTime.Now.Ticks - _playbackStartTime - _totalPauseDuration;
             }
-            
-            // Для циклического воспроизведения используем модуль от общей длительности
+
             long currentCycleTime = currentElapsed % totalEventDuration;
-            
-            // Убедимся, что время не отрицательное
             if (currentCycleTime < 0) currentCycleTime = 0;
             if (currentCycleTime > totalEventDuration) currentCycleTime = totalEventDuration;
-            
+
             return TimeSpan.FromTicks(currentCycleTime);
-        } 
+        }
     }
 
-    public TimeSpan TotalPlaybackTime 
-    { 
-        get 
+    public TimeSpan TotalPlaybackTime
+    {
+        get
         {
-            if (_currentEvents == null || _currentEvents.Count == 0) 
+            if (_currentEvents == null || _currentEvents.Count == 0)
                 return TimeSpan.Zero;
-            
-            // Используем сохраненную длительность если доступна (для согласованности с логами)
+
             if (_savedTotalDurationTicks.HasValue && _savedTotalDurationTicks.Value > 0)
             {
                 return TimeSpan.FromTicks(_savedTotalDurationTicks.Value);
             }
-            
-            // Fallback: вычисляем из событий (для старых файлов без сохраненной длительности)
+
             var sortedEvents = new List<InputEvent>(_currentEvents);
             sortedEvents.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-            
             long startTime = sortedEvents[0].Timestamp;
             long endTime = sortedEvents[sortedEvents.Count - 1].Timestamp;
             return TimeSpan.FromTicks(endTime - startTime);
-        } 
+        }
     }
 
     public bool IsPaused => _isPaused;
     public bool PlaybackStarted => _playbackStarted;
 
-    /// <summary>Пропускает 3 секунды ожидания перед стартом (пауза/горячая клавиша во время отсчёта).</summary>
+    //пропуск 3-секундного отсчёта перед стартом
     public void SkipStartupDelay()
     {
         _skipWarmupDelay = true;
     }
-    
-    // Callback для логирования
+
     private Action<string>? logCallback;
-    
+
     public void SetLogCallback(Action<string>? callback)
     {
         logCallback = callback;
     }
-    
+
     private void Log(string message)
     {
         logCallback?.Invoke(message);
     }
-    
+
     private string GetLanguageName(IntPtr layout)
     {
         long layoutId = layout.ToInt64() & 0xFFFF;
@@ -142,7 +126,7 @@ public class MacroPlayer
     {
         if (events == null || events.Count == 0)
         {
-            Console.WriteLine("Нет событий для воспроизведения!");
+            Log("⚠️ Нет событий для воспроизведения");
             return;
         }
 
@@ -154,19 +138,15 @@ public class MacroPlayer
         _currentEvents = events;
         _currentEventIndex = 0;
         _totalPauseDuration = 0;
-        _savedTotalDurationTicks = savedDurationTicks; // Сохраняем длительность для использования в свойствах
+        _savedTotalDurationTicks = savedDurationTicks;
         _pauseWaitHandle.Set();
-        
-        // СОРТИРУЕМ события перед началом
+
         var eventsCopy = new List<InputEvent>(events);
         eventsCopy.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
-        
-        // Вычисляем время начала и конца событий (нужно для воспроизведения)
+
         long startEventTime = eventsCopy[0].Timestamp;
         long endEventTime = eventsCopy[eventsCopy.Count - 1].Timestamp;
-        
-        // Получаем длительность макроса - используем сохраненную длительность если доступна
-        // Это обеспечивает согласованность с логом остановки записи
+
         long totalMacroDuration;
         if (savedDurationTicks.HasValue && savedDurationTicks.Value > 0)
         {
@@ -174,39 +154,31 @@ public class MacroPlayer
         }
         else
         {
-            // Fallback: вычисляем из событий (для старых файлов без сохраненной длительности)
             totalMacroDuration = endEventTime - startEventTime;
         }
         TimeSpan macroDuration = TimeSpan.FromTicks(totalMacroDuration);
         string durationText = $"{macroDuration:mm\\:ss\\.ff}";
-        
-        // Переключаем язык клавиатуры если нужно
+
         if (keyboardLayout.HasValue && keyboardLayout.Value != IntPtr.Zero)
         {
             IntPtr currentLayout = WinAPI.GetKeyboardLayout(0);
             if (currentLayout != keyboardLayout.Value)
             {
                 WinAPI.ActivateKeyboardLayout(keyboardLayout.Value, WinAPI.KLF_ACTIVATE);
-                string langName = GetLanguageName(keyboardLayout.Value);
-                Log($"🌐 Язык клавиатуры переключен: {langName}");
+                Log($"🌐 Язык клавиатуры переключен: {GetLanguageName(keyboardLayout.Value)}");
             }
         }
-        
+
         using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _internalCancellation.Token))
         {
             try
             {
                 Log($"▶ Начато воспроизведение. Длительность записи: {durationText}");
-                Console.WriteLine($"Воспроизведение. Длительность макроса: {durationText}");
-                Console.WriteLine("Переключитесь в нужное окно за 3 секунды...");
-                Console.WriteLine("Остановка/пауза управляются горячими клавишами приложения");
 
-                // Ожидание перед началом
                 for (int i = 0; i < 30; i++)
                 {
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested)
                     {
-                        Console.WriteLine("Воспроизведение отменено во время задержки");
                         return;
                     }
                     if (_skipWarmupDelay)
@@ -215,25 +187,21 @@ public class MacroPlayer
                 }
 
                 _skipWarmupDelay = false;
-
-                // Таймер воспроизведения начинается здесь
                 _playbackStartTime = DateTime.Now.Ticks;
                 _playbackStarted = true;
-                
+
                 do
                 {
                     if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                    Log($"▶ Цикл воспроизведения начался");
+                    Log("▶ Цикл воспроизведения начался");
 
-                    // Время начала текущего цикла
                     long cycleStartTime = DateTime.Now.Ticks - _totalPauseDuration;
-                    
+
                     for (_currentEventIndex = 0; _currentEventIndex < eventsCopy.Count; _currentEventIndex++)
                     {
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
-                        // Ждем пока не закончится пауза
                         while (_isPaused && !_stopRequested && !linkedCts.Token.IsCancellationRequested)
                         {
                             await Task.Delay(50, linkedCts.Token);
@@ -243,48 +211,40 @@ public class MacroPlayer
 
                         var e = eventsCopy[_currentEventIndex];
                         long eventTimeFromStart = e.Timestamp - startEventTime;
-                        
-                        // Рассчитываем когда должно произойти событие
                         long targetTime = cycleStartTime + eventTimeFromStart;
                         long currentAdjustedTime = DateTime.Now.Ticks - _totalPauseDuration;
-                        
-                        // Если событие уже должно было произойти, выполняем его немедленно
+
                         if (currentAdjustedTime >= targetTime)
                         {
                             ExecuteEvent(e);
                             continue;
                         }
-                        
-                        // Ждем до времени события
+
                         long timeToWait = targetTime - currentAdjustedTime;
                         int waitMs = (int)(timeToWait / TimeSpan.TicksPerMillisecond);
-                        
+
                         if (waitMs > 0)
                         {
-                            // Разбиваем ожидание на мелкие части для проверки паузы
-                            int smallWait = Math.Min(waitMs, 10);
                             int waited = 0;
-                            
+
                             while (waited < waitMs && !_stopRequested && !linkedCts.Token.IsCancellationRequested)
                             {
                                 if (_isPaused)
                                 {
-                                    // На паузе - ждем пока она не закончится
                                     while (_isPaused && !_stopRequested && !linkedCts.Token.IsCancellationRequested)
                                     {
                                         await Task.Delay(50, linkedCts.Token);
                                     }
-                                    
-                                    // После паузы пересчитываем время
+
                                     currentAdjustedTime = DateTime.Now.Ticks - _totalPauseDuration;
                                     timeToWait = targetTime - currentAdjustedTime;
                                     waitMs = (int)(timeToWait / TimeSpan.TicksPerMillisecond);
                                     waited = 0;
-                                    
+
                                     if (waitMs <= 0) break;
                                 }
-                                
-                                smallWait = Math.Min(waitMs - waited, 10);
+
+                                int smallWait = Math.Min(waitMs - waited, 10);
                                 await Task.Delay(smallWait, linkedCts.Token);
                                 waited += smallWait;
                             }
@@ -293,18 +253,14 @@ public class MacroPlayer
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
 
                         ExecuteEvent(e);
-                        
+
                         if (_stopRequested || linkedCts.Token.IsCancellationRequested) break;
                     }
 
                     if (!_stopRequested && !linkedCts.Token.IsCancellationRequested && !_isPaused)
                     {
                         Log("✓ Цикл воспроизведения завершен");
-                        
-                        // Если не цикличное воспроизведение - выходим
                         if (!loop) break;
-                        
-                        // Короткая пауза между циклами (50мс)
                         await Task.Delay(50, linkedCts.Token);
                     }
 
@@ -313,7 +269,6 @@ public class MacroPlayer
                 if (_stopRequested || linkedCts.Token.IsCancellationRequested)
                 {
                     Log("⏹ Воспроизведение остановлено пользователем");
-                    Console.WriteLine("Воспроизведение остановлено пользователем");
                 }
             }
             finally
@@ -334,16 +289,11 @@ public class MacroPlayer
         {
             _isPaused = true;
             _pauseStartTime = DateTime.Now;
-            
-            // получаем текущее время воспроизведения
             TimeSpan currentPlaybackTime = CurrentPlaybackTime;
             string timeText = $"{currentPlaybackTime:mm\\:ss\\.ff}";
-            
             _pauseWaitHandle.Reset();
             ReleaseAllKeys();
-            
             Log($"⏸ Воспроизведение приостановлено на {timeText}");
-            Console.WriteLine($"Воспроизведение приостановлено на {timeText}");
         }
     }
 
@@ -355,8 +305,7 @@ public class MacroPlayer
             _isPaused = false;
             _totalPauseDuration += pauseDuration;
             _pauseWaitHandle.Set();
-            Log($"▶ Воспроизведение возобновлено");
-            Console.WriteLine($"Воспроизведение возобновлено (пауза: {pauseDuration / TimeSpan.TicksPerMillisecond} мс)");
+            Log("▶ Воспроизведение возобновлено");
         }
     }
 
@@ -369,11 +318,9 @@ public class MacroPlayer
             case "KeyPress":
                 SimulateKeyPress(e.KeyCode, e.IsPressed);
                 break;
-
             case "MouseClick":
                 SimulateMouseClick(e.X, e.Y, e.MouseButton, e.IsPressed);
                 break;
-
             case "MouseMove":
                 WinAPI.SetCursorPos(e.X, e.Y);
                 _lastMousePos.X = e.X;
@@ -397,10 +344,7 @@ public class MacroPlayer
                 WinAPI.keybd_event((byte)keyCode, 0, WinAPI.KEYEVENTF_KEYUP, 0);
             }
         }
-        catch
-        {
-            // Игнорируем ошибки
-        }
+        catch { }
     }
 
     private void SimulateMouseClick(int x, int y, int button, bool isPressed)
@@ -419,24 +363,16 @@ public class MacroPlayer
             if (button == 1)
             {
                 if (isPressed)
-                {
                     WinAPI.mouse_event(WinAPI.MOUSEEVENTF_LEFTDOWN, (uint)x, (uint)y, 0, 0);
-                }
                 else
-                {
                     WinAPI.mouse_event(WinAPI.MOUSEEVENTF_LEFTUP, (uint)x, (uint)y, 0, 0);
-                }
             }
             else if (button == 2)
             {
                 if (isPressed)
-                {
                     WinAPI.mouse_event(WinAPI.MOUSEEVENTF_RIGHTDOWN, (uint)x, (uint)y, 0, 0);
-                }
                 else
-                {
                     WinAPI.mouse_event(WinAPI.MOUSEEVENTF_RIGHTUP, (uint)x, (uint)y, 0, 0);
-                }
             }
         }
         catch
@@ -445,10 +381,8 @@ public class MacroPlayer
             {
                 int screenWidth = WinAPI.GetSystemMetrics(0);
                 int screenHeight = WinAPI.GetSystemMetrics(1);
-
                 int absX = x * 65535 / Math.Max(1, screenWidth);
                 int absY = y * 65535 / Math.Max(1, screenHeight);
-
                 uint flags = WinAPI.MOUSEEVENTF_ABSOLUTE;
 
                 if (button == 1)
@@ -458,10 +392,7 @@ public class MacroPlayer
 
                 WinAPI.mouse_event(flags, (uint)absX, (uint)absY, 0, 0);
             }
-            catch
-            {
-                // Игнорируем ошибки
-            }
+            catch { }
         }
     }
 
@@ -472,53 +403,32 @@ public class MacroPlayer
         _playbackStarted = false;
         _pauseWaitHandle.Set();
         _internalCancellation?.Cancel();
-        
-        // Запускаем ReleaseAllKeys асинхронно, чтобы не блокировать остановку
         Task.Run(() => ReleaseAllKeys());
-        
         Log("⏹ Воспроизведение остановлено");
     }
-    
+
     private void ReleaseAllKeys()
     {
-        // Отжимаем кнопки мыши сразу
         try
         {
             WinAPI.mouse_event(WinAPI.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
             WinAPI.mouse_event(WinAPI.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
         }
-        catch
+        catch { }
+
+        byte[] importantKeys = new byte[]
         {
-            // Игнорируем ошибки
-        }
-        
-        // Отжимаем только часто используемые клавиши для ускорения
-        // Основные клавиши модификаторов
-        byte[] importantKeys = new byte[] 
-        {
-            0x10, // Shift
-            0x11, // Ctrl
-            0x12, // Alt
-            0x5B, // Left Win
-            0x5C, // Right Win
-            0xA0, // Left Shift
-            0xA1, // Right Shift
-            0xA2, // Left Ctrl
-            0xA3, // Right Ctrl
-            0xA4, // Left Alt
-            0xA5  // Right Alt
+            0x10, 0x11, 0x12, 0x5B, 0x5C,
+            0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5
         };
-        
+
         foreach (byte keyCode in importantKeys)
         {
             try
             {
                 WinAPI.keybd_event(keyCode, 0, WinAPI.KEYEVENTF_KEYUP, 0);
             }
-            catch
-            {
-                // Игнорируем ошибки
-            }
+            catch { }
         }
     }
 }

@@ -16,9 +16,7 @@ namespace MacroRecorderGUI
     {
         private const int REMOTE_DISCOVERY_PORT = 40445;
         private const int REMOTE_COMMAND_PORT = 40446;
-        /// <summary>Нет объявлений дольше этого интервала — показываем «оффлайн».</summary>
         private const int REMOTE_PEER_TTL_SECONDS = 18;
-        /// <summary>Удаляем запись пира из списка, если давно не было объявлений.</summary>
         private const int REMOTE_PEER_REMOVE_SECONDS = 45;
         private const string REMOTE_MULTICAST_GROUP = "239.255.77.77";
         private readonly string remoteSelfId = Guid.NewGuid().ToString("N");
@@ -81,7 +79,6 @@ namespace MacroRecorderGUI
             }
             catch
             {
-                // ignore
             }
         }
 
@@ -159,7 +156,6 @@ namespace MacroRecorderGUI
                     }
                     catch
                     {
-                        // keep listener alive
                     }
                 }
             }, token);
@@ -211,7 +207,6 @@ namespace MacroRecorderGUI
                     }
                     catch
                     {
-                        // keep listener alive
                     }
                 }
             }, token);
@@ -244,7 +239,6 @@ namespace MacroRecorderGUI
             }
             catch
             {
-                // ignore malformed commands
             }
         }
 
@@ -349,7 +343,6 @@ namespace MacroRecorderGUI
                 }
                 catch
                 {
-                    // host may be unavailable at the moment
                 }
             }
         }
@@ -472,7 +465,6 @@ namespace MacroRecorderGUI
                 }
                 catch
                 {
-                    // continue with other endpoints
                 }
             }
 
@@ -499,7 +491,6 @@ namespace MacroRecorderGUI
             }
             catch
             {
-                // ignore
             }
         }
 

@@ -1,4 +1,3 @@
-// MainForm.RecordingManager.cs
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,19 +38,15 @@ namespace MacroRecorderGUI
         {
             if (!isRecording || recorder == null) return;
 
-            // Мгновенное переключение без задержек
             if (recorder.IsPaused)
             {
                 recorder.ResumeRecording();
-                Console.WriteLine("Запись возобновлена");
             }
             else
             {
                 recorder.PauseRecording();
-                Console.WriteLine("Запись приостановлена");
             }
             
-            // Обновляем сразу, чтобы кнопка мгновенно меняла текст и цвет.
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(UpdateUI));
@@ -84,7 +79,6 @@ namespace MacroRecorderGUI
             recordingTimer?.Stop();
             recorder.StopRecording();
             
-            // Если мы в режиме дозаписи в макрос
             if (isAppendingToMacro)
             {
                 AppendRecordedEventsToMacro();
@@ -93,7 +87,6 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Если мы в режиме замены действия
             if (isReplacingAction && actionToReplaceIndex >= 0)
             {
                 ReplaceActionInMacro();
@@ -103,7 +96,6 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Если мы в режиме замены движений мыши
             if (isReplacingMouseMoves && mouseMovesStartIndex >= 0)
             {
                 ReplaceMouseMovesInMacro();
@@ -114,7 +106,6 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Показываем диалог сохранения
             SaveRecordingDialog();
             
             UpdateUI();
@@ -131,11 +122,10 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Берем первое записанное событие и заменяем им старое
             var newEvent = new InputEvent
             {
                 EventType = recordedEvents[0].EventType,
-                Timestamp = currentEditingEvents[actionToReplaceIndex].Timestamp, // Сохраняем timestamp
+                Timestamp = currentEditingEvents[actionToReplaceIndex].Timestamp,
                 X = recordedEvents[0].X,
                 Y = recordedEvents[0].Y,
                 KeyCode = recordedEvents[0].KeyCode,
@@ -145,7 +135,6 @@ namespace MacroRecorderGUI
             
             currentEditingEvents[actionToReplaceIndex] = newEvent;
             
-            // Сохраняем макрос
             if (currentEditingMacroFile != null)
             {
                 string filePath = System.IO.Path.Combine(macrosDirectory, currentEditingMacroFile);
@@ -153,10 +142,8 @@ namespace MacroRecorderGUI
                 AddLog($"🔄 Действие заменено в макросе {currentEditingMacroFile}");
             }
             
-            // Обновляем интерфейс
             RefreshMacroDetailsPanel();
             
-            // Возвращаемся в настройки если они были открыты
             if (panelSettings != null && !panelSettings.Visible)
             {
                 ShowSettingsPanel();
@@ -174,7 +161,6 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Фильтруем только MouseMove события
             var mouseMoves = recordedEvents.Where(e => e.EventType == "MouseMove").ToList();
             if (mouseMoves.Count == 0)
             {
@@ -182,7 +168,6 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Удаляем старые движения мыши
             int removed = 0;
             for (int i = mouseMovesStartIndex; i < currentEditingEvents.Count && removed < mouseMovesCountToReplace;)
             {
@@ -197,7 +182,6 @@ namespace MacroRecorderGUI
                 }
             }
             
-            // Вставляем новые движения мыши на то же место с правильным timestamp
             long baseTimestamp = mouseMovesStartIndex > 0 && mouseMovesStartIndex <= currentEditingEvents.Count 
                 ? currentEditingEvents[Math.Max(0, mouseMovesStartIndex - 1)].Timestamp + 1000000 
                 : 0;
@@ -207,14 +191,13 @@ namespace MacroRecorderGUI
                 var newMove = new InputEvent
                 {
                     EventType = "MouseMove",
-                    Timestamp = baseTimestamp + (i * 100000), // Небольшие интервалы между движениями
+                    Timestamp = baseTimestamp + (i * 100000),
                     X = mouseMoves[i].X,
                     Y = mouseMoves[i].Y
                 };
                 currentEditingEvents.Insert(mouseMovesStartIndex + i, newMove);
             }
             
-            // Сохраняем макрос
             if (currentEditingMacroFile != null)
             {
                 string filePath = System.IO.Path.Combine(macrosDirectory, currentEditingMacroFile);
@@ -222,10 +205,8 @@ namespace MacroRecorderGUI
                 AddLog($"🔄 Движения мыши заменены в макросе {currentEditingMacroFile}");
             }
             
-            // Обновляем интерфейс
             RefreshMacroDetailsPanel();
             
-            // Возвращаемся в настройки если они были открыты
             if (panelSettings != null && !panelSettings.Visible)
             {
                 ShowSettingsPanel();

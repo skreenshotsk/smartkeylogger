@@ -1,4 +1,3 @@
-// MainForm.MacroEditor.cs - Редактирование макросов
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -52,7 +51,6 @@ namespace MacroRecorderGUI
                 currentEditingEvents = new List<InputEvent>();
             }
             
-            // Название макроса (редактируемое)
             Label lblMacroNameLabel = new Label
             {
                 Text = "Название макроса:",
@@ -74,7 +72,6 @@ namespace MacroRecorderGUI
             };
             panel.Controls.Add(txtMacroName);
             
-            // Кнопка удаления макроса
             Button btnDeleteMacro = new Button
             {
                 Text = "Удалить запись",
@@ -98,7 +95,6 @@ namespace MacroRecorderGUI
             };
             panel.Controls.Add(btnDeleteMacro);
             
-            // Список действий
             int yPos = 80;
             Label lblActions = new Label
             {
@@ -110,7 +106,6 @@ namespace MacroRecorderGUI
             };
             panel.Controls.Add(lblActions);
             
-            // Кнопка "Добавить действие"
             Button btnAddAction = new Button
             {
                 Text = "Добавить действие",
@@ -130,7 +125,6 @@ namespace MacroRecorderGUI
             
             yPos += 45;
             
-            // Группируем движения мыши и нумеруем действия
             var groupedEvents = new List<object>();
             List<InputEvent> mouseMoveGroup = new List<InputEvent>();
             
@@ -178,7 +172,6 @@ namespace MacroRecorderGUI
                 });
             }
             
-            // Панель для списка действий
             Panel actionsPanel = new Panel
             {
                 Location = new System.Drawing.Point(0, yPos),
@@ -267,7 +260,6 @@ namespace MacroRecorderGUI
             
             yPos += 460;
             
-            // Кнопка сохранения
             Button btnSaveMacro = new Button
             {
                 Text = "💾 Сохранить изменения",
@@ -729,10 +721,7 @@ namespace MacroRecorderGUI
                 string settingsPath = Path.Combine(Application.StartupPath, "settings.json");
                 File.WriteAllText(settingsPath, json);
             }
-            catch
-            {
-                // Игнорируем ошибки сохранения настроек
-            }
+            catch { }
         }
         
         private void DeleteMacroAction(dynamic eventItem, Panel panel)

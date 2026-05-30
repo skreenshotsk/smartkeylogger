@@ -1,4 +1,3 @@
-// MainForm.PlaybackManager.cs
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -47,9 +46,9 @@ namespace MacroRecorderGUI
         {
             if (!isPlaying || player == null) return;
             
-            // Во время отсчёта перед стартом — пропуск задержки (только локально, без рассылки)
             if (!player.PlaybackStarted)
             {
+                //во время отсчёта — пропуск задержки, без рассылки на удалённые ПК
                 player.SkipStartupDelay();
                 if (InvokeRequired)
                     BeginInvoke(new Action(UpdateUI));
@@ -58,7 +57,6 @@ namespace MacroRecorderGUI
                 return;
             }
 
-            // Мгновенное переключение без задержек
             if (player.IsPaused)
             {
                 player.ResumePlayback();
@@ -68,7 +66,6 @@ namespace MacroRecorderGUI
                 player.PausePlayback();
             }
             
-            // Обновляем UI асинхронно чтобы не блокировать
             if (InvokeRequired)
             {
                 BeginInvoke(new Action(UpdateUI));
@@ -88,7 +85,6 @@ namespace MacroRecorderGUI
         {
             if (isPlaying || isRecording || recorder == null || player == null) return;
 
-            // Определяем какой файл загружать
             string fileToLoad = GetSelectedMacroFile();
             if (string.IsNullOrEmpty(fileToLoad))
             {
@@ -101,10 +97,8 @@ namespace MacroRecorderGUI
             AddLog($"📂 Загрузка файла для воспроизведения: {Path.GetFileName(fileToLoad)}");
             var events = recorder.LoadFromFile(fileToLoad);
             
-            // Проверяем наличие событий до установки состояния воспроизведения
             if (events == null || events.Count == 0)
             {
-                // Сбрасываем состояние, если оно было установлено (например, из планировщика)
                 isPlaying = false;
                 isWaitingForSchedule = false;
                 scheduleTimer?.Stop();
@@ -119,15 +113,13 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // События есть - начинаем воспроизведение
             isPlaying = true;
-            isWaitingForSchedule = false; // Сбрасываем режим ожидания, начинается воспроизведение
+            isWaitingForSchedule = false;
             playbackCancellation = new System.Threading.CancellationTokenSource();
             AddLog("▶ Запущено воспроизведение (F11)");
             playbackTimer?.Start();
             UpdateUI();
             
-            // Запускаем задачу для периодического обновления UI во время технической паузы
             var uiUpdateTask = Task.Run(async () =>
             {
                 while (isPlaying && player != null && !player.PlaybackStarted && !playbackCancellation.Token.IsCancellationRequested)
@@ -164,10 +156,7 @@ namespace MacroRecorderGUI
             {
                 await player.PlayEvents(events, false, playbackCancellation.Token, keyboardLayout, durationTicks);
             }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("Воспроизведение остановлено пользователем");
-            }
+            catch (OperationCanceledException) { }
             
             isPlaying = false;
             UpdateUI();
@@ -177,7 +166,6 @@ namespace MacroRecorderGUI
         {
             if (isPlaying || isRecording || recorder == null || player == null) return;
 
-            // Определяем какой файл загружать
             string fileToLoad = GetSelectedMacroFile();
             if (string.IsNullOrEmpty(fileToLoad))
             {
@@ -190,10 +178,8 @@ namespace MacroRecorderGUI
             AddLog($"📂 Загрузка файла для циклического воспроизведения: {Path.GetFileName(fileToLoad)}");
             var events = recorder.LoadFromFile(fileToLoad);
             
-            // Проверяем наличие событий до установки состояния воспроизведения
             if (events == null || events.Count == 0)
             {
-                // Сбрасываем состояние
                 isPlaying = false;
                 isWaitingForSchedule = false;
                 scheduleTimer?.Stop();
@@ -208,11 +194,10 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // События есть - начинаем воспроизведение
             if (events != null && events.Count > 0)
             {
                 isPlaying = true;
-                isWaitingForSchedule = false; // Сбрасываем режим ожидания, начинается воспроизведение
+                isWaitingForSchedule = false;
                 playbackCancellation = new System.Threading.CancellationTokenSource();
                 AddLog("🔄 Запущено циклическое воспроизведение (Ctrl+F12)");
                 playbackTimer?.Start();
@@ -237,7 +222,6 @@ namespace MacroRecorderGUI
                     return;
                 }
                 
-                // Запускаем задачу для периодического обновления UI во время технической паузы
                 var uiUpdateTask = Task.Run(async () =>
                 {
                     while (isPlaying && player != null && !player.PlaybackStarted && !playbackCancellation.Token.IsCancellationRequested)
@@ -254,10 +238,7 @@ namespace MacroRecorderGUI
                 {
                     await player.PlayEvents(events, true, playbackCancellation.Token, keyboardLayout, durationTicks);
                 }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("Воспроизведение остановлено пользователем");
-                }
+                catch (OperationCanceledException) { }
                 
                 isPlaying = false;
                 UpdateUI();
@@ -271,7 +252,6 @@ namespace MacroRecorderGUI
 
         private void StopPlayback(bool propagateToRemotes)
         {
-            // Если ожидается запланированное выполнение, отменяем его
             if (isWaitingForSchedule && !isPlaying)
             {
                 scheduleTimer?.Stop();
@@ -307,7 +287,6 @@ namespace MacroRecorderGUI
                 _ = BroadcastRemoteCommandAsync(new RemoteCommandMessage { Command = "stop" });
             }
             
-            Console.WriteLine("Воспроизведение остановлено по запросу пользователя");
         }
 
         private async void StartRemotePlayback(MacroData macroData, bool loop)
@@ -342,7 +321,6 @@ namespace MacroRecorderGUI
             }
             catch (OperationCanceledException)
             {
-                // ignore
             }
 
             isPlaying = false;

@@ -1,4 +1,3 @@
-// MainForm.cs - Основной файл с инициализацией, обработчиками событий и методами, которые еще не вынесены
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,29 +9,24 @@ namespace MacroRecorderGUI
 {
     public partial class MainForm : Form
     {
-        // Основные компоненты
         private MacroRecorder? recorder;
         private MacroPlayer? player;
         private CancellationTokenSource? playbackCancellation;
         private bool isPlaying = false;
         private bool isRecording = false;
         
-        // Таймеры
         private System.Windows.Forms.Timer? recordingTimer;
         private System.Windows.Forms.Timer? playbackTimer;
         private System.Windows.Forms.Timer? scheduleTimer;
         
-        // Планировщик выполнения
         private DateTime? scheduledDateTime = null;
         private string? scheduledMacroFile = null;
         private bool isWaitingForSchedule = false;
         
-        // Управление файлами записей
         private List<string> savedMacroFiles = new List<string>();
         private string currentMacroFile = "";
         private string macrosDirectory = "";
         
-        // Состояние редактирования макросов
         private List<InputEvent>? currentEditingEvents = null;
         private string? currentEditingMacroFile = null;
         private long? currentEditingKeyboardLayout = null;
@@ -46,7 +40,6 @@ namespace MacroRecorderGUI
         private bool isReplacingMouseMoves = false;
         private Panel? currentMacroDetailsPanel = null;
         
-        // UI компоненты настроек
         private Button? btnTabHotkeys = null;
         private Button? btnTabMacros = null;
         private Panel? settingsContentPanel = null;
@@ -59,24 +52,20 @@ namespace MacroRecorderGUI
             RegisterGlobalHotkeys();
             InitializeTimers();
             
-            // Подключаем обработчики для отслеживания клавиш при настройке горячих клавиш
             this.KeyDown += MainForm_KeyDown;
             this.KeyUp += MainForm_KeyUp;
         }
 
         private void InitializeTimers()
         {
-            // Таймер записи
             recordingTimer = new System.Windows.Forms.Timer();
             recordingTimer.Interval = 100;
             recordingTimer.Tick += RecordingTimer_Tick!;
 
-            // Таймер воспроизведения
             playbackTimer = new System.Windows.Forms.Timer();
             playbackTimer.Interval = 100;
             playbackTimer.Tick += PlaybackTimer_Tick!;
 
-            // Таймер планировщика
             scheduleTimer = new System.Windows.Forms.Timer();
             scheduleTimer.Interval = 1000;
             scheduleTimer.Tick += ScheduleTimer_Tick!;
@@ -88,7 +77,6 @@ namespace MacroRecorderGUI
             player = new MacroPlayer();
             playbackCancellation = new CancellationTokenSource();
             
-            // Инициализируем директорию для макросов
             macrosDirectory = Path.Combine(Application.StartupPath, "Macros");
             if (!Directory.Exists(macrosDirectory))
             {
@@ -96,14 +84,11 @@ namespace MacroRecorderGUI
                 AddLog($"📁 Создана директория для макросов: {macrosDirectory}");
             }
             
-            // Загружаем список существующих файлов
             LoadMacroFilesList();
             
-            // Передаем ссылку на форму для логирования
             recorder.SetLogCallback(AddLog);
             player.SetLogCallback(AddLog);
 
-            // Инициализируем ComboBox
             UpdateMacroFilesComboBox();
             InitializeRemoteSync();
 
@@ -154,7 +139,7 @@ namespace MacroRecorderGUI
         {
             if (m.Msg == WM_HOTKEY)
             {
-                // Игнорируем горячие клавиши если открыто меню настроек И мы не ожидаем настройку новой горячей клавиши
+                //в настройках горячие клавиши отключены, кроме режима назначения
                 if (panelSettings != null && panelSettings.Visible && (waitingForHotkeyButton == null || !waitingForHotkeyId.HasValue))
                 {
                     base.WndProc(ref m);
@@ -217,21 +202,18 @@ namespace MacroRecorderGUI
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // ВАЖНО: Обрабатываем горячую клавишу ТОЛЬКО если панель настроек видима И мы ожидаем нажатие клавиши
             if (waitingForHotkeyButton != null && waitingForHotkeyId.HasValue && panelSettings != null && panelSettings.Visible)
             {
-                return false; // НЕ обрабатываем здесь, пусть KeyDown/KeyUp обработают
+                return false; //назначение клавиши обрабатывает KeyDown/KeyUp
             }
             
-            // Блокируем обработку клавиш только если открыто меню настроек И мы НЕ ожидаем настройку
             if (panelSettings != null && panelSettings.Visible)
             {
-                // Иначе нельзя вводить текст в TextBox / RichTextBox и т.п. (переименование макроса и др.)
                 if (IsTextEditingControlFocused())
                 {
-                    return base.ProcessCmdKey(ref msg, keyData);
+                    return base.ProcessCmdKey(ref msg, keyData); //переименование макроса и др.
                 }
-                return true; // Блокируем прочие клавиши в меню настроек
+                return true; //блокируем прочие клавиши в меню настроек
             }
             
             return base.ProcessCmdKey(ref msg, keyData);
@@ -260,7 +242,6 @@ namespace MacroRecorderGUI
             return false;
         }
 
-        // Обработчики событий UI
         private void btnPausePlayback_Click(object sender, EventArgs e)
         {
             TogglePausePlayback();
@@ -298,7 +279,6 @@ namespace MacroRecorderGUI
 
         private void btnSchedulePlayback_Click(object sender, EventArgs e)
         {
-            // Проверяем, что файл выбран
             string fileToSchedule = GetSelectedMacroFile();
             if (string.IsNullOrEmpty(fileToSchedule))
             {
@@ -308,7 +288,6 @@ namespace MacroRecorderGUI
                 return;
             }
 
-            // Проверяем, нет ли уже запланированного выполнения
             if (isWaitingForSchedule && scheduledDateTime.HasValue)
             {
                 MessageBox.Show($"Уже запланировано выполнение на {scheduledDateTime.Value:dd.MM.yyyy HH:mm}. " +
@@ -317,21 +296,17 @@ namespace MacroRecorderGUI
                 return;
             }
 
-            // Открываем форму выбора даты и времени
             ScheduleForm scheduleForm = new ScheduleForm();
             if (scheduleForm.ShowDialog() == DialogResult.OK && scheduleForm.Confirmed)
             {
                 DateTime selectedDateTime = scheduleForm.SelectedDateTime;
                 
-                // Сохраняем запланированное выполнение
                 scheduledDateTime = selectedDateTime;
                 scheduledMacroFile = fileToSchedule;
                 isWaitingForSchedule = true;
 
-                // Запускаем таймер планировщика
                 scheduleTimer?.Start();
 
-                // Обновляем UI
                 UpdateUI();
 
                 string dateStr = selectedDateTime.ToString("dd.MM.yyyy");
@@ -375,20 +350,17 @@ namespace MacroRecorderGUI
                 return;
             }
             
-            // Инициализируем панель настроек при первом открытии
             if (panelSettings.Controls.Count == 0)
             {
                 InitializeSettingsPanel();
             }
             
-            // Убеждаемся, что панель настроек добавлена в форму
             if (!this.Controls.Contains(panelSettings))
             {
                 this.Controls.Add(panelSettings);
                 panelSettings.BringToFront();
             }
             
-            // Переключаем видимость панелей
             panelMain.Visible = false;
             panelLogs.Visible = false;
             panelSettings.Visible = true;
@@ -422,7 +394,6 @@ namespace MacroRecorderGUI
             panelSettings.BackColor = System.Drawing.Color.White;
             panelSettings.Dock = DockStyle.Fill;
             
-            // Контейнер для содержимого
             settingsContentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -430,7 +401,6 @@ namespace MacroRecorderGUI
                 AutoScroll = true
             };
             
-            // Панель с кнопкой "Назад" и вкладками
             Panel tabsPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -439,7 +409,6 @@ namespace MacroRecorderGUI
                 Padding = new Padding(30, 10, 30, 10)
             };
             
-            // Кнопка "Назад"
             Button btnBack = new Button
             {
                 Text = "◀ НАЗАД",
@@ -454,7 +423,6 @@ namespace MacroRecorderGUI
             btnBack.Click += (s, e) => HideSettingsPanel();
             tabsPanel.Controls.Add(btnBack);
             
-            // Вкладки
             btnTabHotkeys = new Button
             {
                 Text = "ГОРЯЧИЕ КЛАВИШИ",
@@ -493,7 +461,6 @@ namespace MacroRecorderGUI
             tabsPanel.Controls.Add(btnTabHotkeys);
             tabsPanel.Controls.Add(btnTabMacros);
             
-            // Header
             Panel headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
@@ -511,12 +478,11 @@ namespace MacroRecorderGUI
             };
             headerPanel.Controls.Add(lblSettingsTitle);
             
-            // Добавляем в обратном порядке из-за Dock.Top
+            //порядок обратный из-за Dock.Top
             panelSettings.Controls.Add(settingsContentPanel);
             panelSettings.Controls.Add(tabsPanel);
             panelSettings.Controls.Add(headerPanel);
             
-            // Показываем настройки горячих клавиш по умолчанию
             SwitchTab("hotkeys");
             ShowHotkeysSettings();
         }
@@ -539,7 +505,6 @@ namespace MacroRecorderGUI
         
         private void RefreshMacroDetailsPanel()
         {
-            // Всегда обновляем, даже если настройки не видны
             if (currentEditingMacroFile != null && currentMacroDetailsPanel != null)
             {
                 ShowMacroDetails(currentEditingMacroFile, currentMacroDetailsPanel);
@@ -584,7 +549,6 @@ namespace MacroRecorderGUI
             AddLog("❌ Запись отменена");
             UpdateUI();
             
-            // Возвращаемся в настройки если они были открыты
             if (panelSettings != null)
             {
                 ShowSettingsPanel();
@@ -932,7 +896,6 @@ namespace MacroRecorderGUI
                     AddLog($"📋 Выбран внешний файл для воспроизведения: {Path.GetFileName(currentMacroFile)}");
                 }
                 
-                // Обновляем состояние кнопок после выбора файла
                 UpdateUI();
             }
         }
@@ -968,7 +931,5 @@ namespace MacroRecorderGUI
             return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : null;
         }
 
-        // Вспомогательные методы, которые используются в других модулях
-        // Эти методы будут реализованы в других partial файлах
     }
 }

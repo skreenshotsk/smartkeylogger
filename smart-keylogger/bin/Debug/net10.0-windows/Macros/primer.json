@@ -1,0 +1,1167 @@
+{
+  "events": [
+    {
+      "eventType": "MouseMove",
+      "timestamp": 346982,
+      "x": -795,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 430613,
+      "x": -795,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 500341,
+      "x": -796,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 560365,
+      "x": -796,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 620271,
+      "x": -797,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 660152,
+      "x": -797,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 700210,
+      "x": -797,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 710077,
+      "x": -798,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 740063,
+      "x": -798,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 780301,
+      "x": -799,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 810135,
+      "x": -799,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 850092,
+      "x": -800,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 880221,
+      "x": -800,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 900070,
+      "x": -800,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 910024,
+      "x": -800,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 941336,
+      "x": -801,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 960163,
+      "x": -801,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 990076,
+      "x": -802,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1010253,
+      "x": -802,
+      "y": 557,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1041416,
+      "x": -803,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1050094,
+      "x": -803,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1080060,
+      "x": -804,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1100129,
+      "x": -804,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1120050,
+      "x": -805,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1130015,
+      "x": -805,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1140050,
+      "x": -805,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1160026,
+      "x": -805,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1180108,
+      "x": -806,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1200226,
+      "x": -806,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1210050,
+      "x": -807,
+      "y": 556,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1220498,
+      "x": -807,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1230057,
+      "x": -807,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1250137,
+      "x": -808,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1270099,
+      "x": -808,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1290026,
+      "x": -809,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1300058,
+      "x": -809,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1320034,
+      "x": -810,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1340150,
+      "x": -810,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1350081,
+      "x": -810,
+      "y": 555,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1363471,
+      "x": -810,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1380003,
+      "x": -811,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1390726,
+      "x": -811,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1410015,
+      "x": -812,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1429953,
+      "x": -812,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1440133,
+      "x": -812,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1450024,
+      "x": -813,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1479976,
+      "x": -813,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1500003,
+      "x": -814,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1510067,
+      "x": -814,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1520015,
+      "x": -814,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1540021,
+      "x": -815,
+      "y": 554,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1570013,
+      "x": -815,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1590012,
+      "x": -815,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1620043,
+      "x": -816,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1650034,
+      "x": -816,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1670040,
+      "x": -817,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1690037,
+      "x": -817,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1700031,
+      "x": -817,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1740112,
+      "x": -818,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1770325,
+      "x": -818,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1800196,
+      "x": -819,
+      "y": 553,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1830113,
+      "x": -819,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1839994,
+      "x": -819,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1880189,
+      "x": -820,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1920073,
+      "x": -820,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 1960262,
+      "x": -820,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2000148,
+      "x": -821,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2010033,
+      "x": -821,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2040123,
+      "x": -821,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2080058,
+      "x": -822,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2120398,
+      "x": -822,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2150136,
+      "x": -823,
+      "y": 552,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2160106,
+      "x": -823,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2200134,
+      "x": -823,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2230031,
+      "x": -824,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2259978,
+      "x": -824,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2300121,
+      "x": -825,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2330183,
+      "x": -825,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2370144,
+      "x": -825,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2410260,
+      "x": -826,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2450546,
+      "x": -826,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2510260,
+      "x": -827,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 2590847,
+      "x": -827,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3130639,
+      "x": -828,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3310877,
+      "x": -828,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3400543,
+      "x": -829,
+      "y": 551,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3410647,
+      "x": -829,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3480618,
+      "x": -829,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3572454,
+      "x": -830,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3681409,
+      "x": -830,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 3820523,
+      "x": -830,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 4781504,
+      "x": -831,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 4870631,
+      "x": -831,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 4930549,
+      "x": -832,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 4960333,
+      "x": -832,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 4980069,
+      "x": -832,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5040311,
+      "x": -833,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5080094,
+      "x": -833,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5120588,
+      "x": -834,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5150438,
+      "x": -834,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5190839,
+      "x": -835,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5230331,
+      "x": -835,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5260050,
+      "x": -835,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5290115,
+      "x": -836,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5310207,
+      "x": -836,
+      "y": 550,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5340193,
+      "x": -837,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5361466,
+      "x": -837,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5390129,
+      "x": -838,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5409982,
+      "x": -838,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5430288,
+      "x": -839,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5450042,
+      "x": -839,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5480044,
+      "x": -840,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5500912,
+      "x": -840,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5510024,
+      "x": -840,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5520018,
+      "x": -840,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5540088,
+      "x": -841,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5570107,
+      "x": -841,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5590214,
+      "x": -842,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5610045,
+      "x": -842,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5640065,
+      "x": -843,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5660010,
+      "x": -843,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5700042,
+      "x": -844,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5730224,
+      "x": -844,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5780278,
+      "x": -845,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseMove",
+      "timestamp": 5830147,
+      "x": -845,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "KeyPress",
+      "timestamp": 21335789,
+      "x": 0,
+      "y": 0,
+      "keyCode": 75,
+      "mouseButton": 0,
+      "isPressed": true
+    },
+    {
+      "eventType": "KeyPress",
+      "timestamp": 22212207,
+      "x": 0,
+      "y": 0,
+      "keyCode": 75,
+      "mouseButton": 0,
+      "isPressed": false
+    },
+    {
+      "eventType": "MouseClick",
+      "timestamp": 38186335,
+      "x": -845,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": true
+    },
+    {
+      "eventType": "MouseClick",
+      "timestamp": 38876245,
+      "x": -845,
+      "y": 549,
+      "keyCode": 0,
+      "mouseButton": 2,
+      "isPressed": false
+    }
+  ],
+  "keyboardLayout": null,
+  "durationTicks": 57770387
+}

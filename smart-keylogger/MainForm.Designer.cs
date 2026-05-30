@@ -1,4 +1,3 @@
-// MainForm.Designer.cs
 namespace MacroRecorderGUI
 {
     partial class MainForm
@@ -57,7 +56,6 @@ namespace MacroRecorderGUI
             this.panelMain.SuspendLayout();
             this.SuspendLayout();
             
-            // panelHeader
             this.panelHeader.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(80)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
             this.panelHeader.Controls.Add(this.lblTitle);
             this.panelHeader.Dock = System.Windows.Forms.DockStyle.Top;
@@ -66,7 +64,6 @@ namespace MacroRecorderGUI
             this.panelHeader.Size = new System.Drawing.Size(700, 80);
             this.panelHeader.TabIndex = 0;
             
-            // lblTitle
             this.lblTitle.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Bold);
             this.lblTitle.ForeColor = System.Drawing.Color.White;
@@ -77,7 +74,6 @@ namespace MacroRecorderGUI
             this.lblTitle.Text = "🕹 Macro Recorder";
             this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             
-            // panelRecording
             this.panelRecording.BackColor = System.Drawing.Color.White;
             this.panelRecording.Controls.Add(this.btnSettings);
             this.panelRecording.Controls.Add(this.chkTrackLanguage);
@@ -93,7 +89,6 @@ namespace MacroRecorderGUI
             this.panelRecording.Size = new System.Drawing.Size(700, 230);
             this.panelRecording.TabIndex = 1;
             
-            // btnSettings
             this.btnSettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(156)))), ((int)(((byte)(39)))), ((int)(((byte)(176)))));
             this.btnSettings.FlatAppearance.BorderSize = 0;
             this.btnSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -107,7 +102,6 @@ namespace MacroRecorderGUI
             this.btnSettings.UseVisualStyleBackColor = false;
             this.btnSettings.Click += new System.EventHandler(this.btnSettings_Click);
             
-            // chkTrackLanguage
             this.chkTrackLanguage.AutoSize = true;
             this.chkTrackLanguage.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.chkTrackLanguage.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
@@ -118,7 +112,6 @@ namespace MacroRecorderGUI
             this.chkTrackLanguage.Text = "✓ Отслеживать язык клавиатуры при записи";
             this.chkTrackLanguage.UseVisualStyleBackColor = true;
             
-            // btnPauseRecord
             this.btnPauseRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
             this.btnPauseRecord.FlatAppearance.BorderSize = 0;
             this.btnPauseRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -132,7 +125,6 @@ namespace MacroRecorderGUI
             this.btnPauseRecord.UseVisualStyleBackColor = false;
             this.btnPauseRecord.Click += new System.EventHandler(this.btnPauseRecord_Click);
             
-            // lblRecordingTitle
             this.lblRecordingTitle.AutoSize = true;
             this.lblRecordingTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
             this.lblRecordingTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
@@ -142,7 +134,6 @@ namespace MacroRecorderGUI
             this.lblRecordingTitle.TabIndex = 2;
             this.lblRecordingTitle.Text = "Запись:";
             
-            // btnStartRecord
             this.btnStartRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnStartRecord.FlatAppearance.BorderSize = 0;
             this.btnStartRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -156,7 +147,6 @@ namespace MacroRecorderGUI
             this.btnStartRecord.UseVisualStyleBackColor = false;
             this.btnStartRecord.Click += new System.EventHandler(this.btnStartRecord_Click);
             
-            // btnStopRecord
             this.btnStopRecord.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnStopRecord.FlatAppearance.BorderSize = 0;
             this.btnStopRecord.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -170,21 +160,6 @@ namespace MacroRecorderGUI
             this.btnStopRecord.UseVisualStyleBackColor = false;
             this.btnStopRecord.Click += new System.EventHandler(this.btnStopRecord_Click);
             
-            // btnSettings
-            this.btnSettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(156)))), ((int)(((byte)(39)))), ((int)(((byte)(176)))));
-            this.btnSettings.FlatAppearance.BorderSize = 0;
-            this.btnSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnSettings.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            this.btnSettings.ForeColor = System.Drawing.Color.White;
-            this.btnSettings.Location = new System.Drawing.Point(450, 180);
-            this.btnSettings.Name = "btnSettings";
-            this.btnSettings.Size = new System.Drawing.Size(220, 35);
-            this.btnSettings.TabIndex = 5;
-            this.btnSettings.Text = "⚙️ НАСТРОЙКИ";
-            this.btnSettings.UseVisualStyleBackColor = false;
-            this.btnSettings.Click += new System.EventHandler(this.btnSettings_Click);
-            
-            // panelPlayback
             this.panelPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
             this.panelPlayback.Controls.Add(this.btnSchedulePlayback);
             this.panelPlayback.Controls.Add(this.btnLoadMacroFile);
@@ -208,7 +183,6 @@ namespace MacroRecorderGUI
             this.panelPlayback.Size = new System.Drawing.Size(700, 430);
             this.panelPlayback.TabIndex = 2;
             
-            // btnPausePlayback
             this.btnPausePlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(152)))), ((int)(((byte)(0)))));
             this.btnPausePlayback.FlatAppearance.BorderSize = 0;
             this.btnPausePlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -222,7 +196,6 @@ namespace MacroRecorderGUI
             this.btnPausePlayback.UseVisualStyleBackColor = false;
             this.btnPausePlayback.Click += new System.EventHandler(this.btnPausePlayback_Click);
             
-            // lblPlaybackTitle
             this.lblPlaybackTitle.AutoSize = true;
             this.lblPlaybackTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
             this.lblPlaybackTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
@@ -232,7 +205,6 @@ namespace MacroRecorderGUI
             this.lblPlaybackTitle.TabIndex = 3;
             this.lblPlaybackTitle.Text = "Воспроизведение:";
             
-            // lblMacroFile
             this.lblMacroFile.AutoSize = true;
             this.lblMacroFile.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.lblMacroFile.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
@@ -242,7 +214,6 @@ namespace MacroRecorderGUI
             this.lblMacroFile.TabIndex = 5;
             this.lblMacroFile.Text = "Файл макроса:";
             
-            // cmbMacroFiles
             this.cmbMacroFiles.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbMacroFiles.Font = new System.Drawing.Font("Segoe UI", 12F);
             this.cmbMacroFiles.FormattingEnabled = true;
@@ -252,7 +223,6 @@ namespace MacroRecorderGUI
             this.cmbMacroFiles.TabIndex = 6;
             this.cmbMacroFiles.SelectedIndexChanged += new System.EventHandler(this.cmbMacroFiles_SelectedIndexChanged);
             
-            // btnLoadMacroFile
             this.btnLoadMacroFile.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(76)))), ((int)(((byte)(175)))), ((int)(((byte)(80)))));
             this.btnLoadMacroFile.FlatAppearance.BorderSize = 0;
             this.btnLoadMacroFile.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -266,7 +236,6 @@ namespace MacroRecorderGUI
             this.btnLoadMacroFile.UseVisualStyleBackColor = false;
             this.btnLoadMacroFile.Click += new System.EventHandler(this.btnLoadMacroFile_Click);
             
-            // btnSchedulePlayback
             this.btnSchedulePlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(156)))), ((int)(((byte)(39)))), ((int)(((byte)(176)))));
             this.btnSchedulePlayback.FlatAppearance.BorderSize = 0;
             this.btnSchedulePlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -282,9 +251,7 @@ namespace MacroRecorderGUI
             this.btnSchedulePlayback.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(123)))), ((int)(((byte)(31)))), ((int)(((byte)(162)))));
             this.btnSchedulePlayback.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(74)))), ((int)(((byte)(20)))), ((int)(((byte)(140)))));
             this.btnSchedulePlayback.Click += new System.EventHandler(this.btnSchedulePlayback_Click);
-            this.panelPlayback.Controls.Add(this.btnSchedulePlayback);
             
-            // btnPlay
             this.btnPlay.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnPlay.FlatAppearance.BorderSize = 0;
             this.btnPlay.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -298,7 +265,6 @@ namespace MacroRecorderGUI
             this.btnPlay.UseVisualStyleBackColor = false;
             this.btnPlay.Click += new System.EventHandler(this.btnPlay_Click);
             
-            // btnPlayLoop
             this.btnPlayLoop.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnPlayLoop.FlatAppearance.BorderSize = 0;
             this.btnPlayLoop.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -312,7 +278,6 @@ namespace MacroRecorderGUI
             this.btnPlayLoop.UseVisualStyleBackColor = false;
             this.btnPlayLoop.Click += new System.EventHandler(this.btnPlayLoop_Click);
             
-            // btnStopPlayback
             this.btnStopPlayback.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnStopPlayback.FlatAppearance.BorderSize = 0;
             this.btnStopPlayback.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -326,7 +291,6 @@ namespace MacroRecorderGUI
             this.btnStopPlayback.UseVisualStyleBackColor = false;
             this.btnStopPlayback.Click += new System.EventHandler(this.btnStopPlay_Click);
 
-            // lblRemoteTargets
             this.lblRemoteTargets.AutoSize = true;
             this.lblRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.lblRemoteTargets.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(66)))), ((int)(((byte)(66)))), ((int)(((byte)(66)))));
@@ -336,7 +300,6 @@ namespace MacroRecorderGUI
             this.lblRemoteTargets.TabIndex = 9;
             this.lblRemoteTargets.Text = "Устройства для синхронизации:";
 
-            // checkedListRemoteTargets
             this.checkedListRemoteTargets.CheckOnClick = true;
             this.checkedListRemoteTargets.Font = new System.Drawing.Font("Segoe UI", 9.5F);
             this.checkedListRemoteTargets.FormattingEnabled = true;
@@ -346,7 +309,6 @@ namespace MacroRecorderGUI
             this.checkedListRemoteTargets.SelectionMode = System.Windows.Forms.SelectionMode.One;
             this.checkedListRemoteTargets.TabIndex = 10;
 
-            // btnRefreshRemoteTargets
             this.btnRefreshRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(96)))), ((int)(((byte)(125)))), ((int)(((byte)(139)))));
             this.btnRefreshRemoteTargets.FlatAppearance.BorderSize = 0;
             this.btnRefreshRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -360,7 +322,6 @@ namespace MacroRecorderGUI
             this.btnRefreshRemoteTargets.UseVisualStyleBackColor = false;
             this.btnRefreshRemoteTargets.Click += new System.EventHandler(this.btnRefreshRemoteTargets_Click);
 
-            // btnSelectAllRemoteTargets
             this.btnSelectAllRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.btnSelectAllRemoteTargets.FlatAppearance.BorderSize = 0;
             this.btnSelectAllRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -374,7 +335,6 @@ namespace MacroRecorderGUI
             this.btnSelectAllRemoteTargets.UseVisualStyleBackColor = false;
             this.btnSelectAllRemoteTargets.Click += new System.EventHandler(this.btnSelectAllRemoteTargets_Click);
 
-            // btnSelectNoneRemoteTargets
             this.btnSelectNoneRemoteTargets.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(158)))), ((int)(((byte)(158)))), ((int)(((byte)(158)))));
             this.btnSelectNoneRemoteTargets.FlatAppearance.BorderSize = 0;
             this.btnSelectNoneRemoteTargets.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -388,7 +348,6 @@ namespace MacroRecorderGUI
             this.btnSelectNoneRemoteTargets.UseVisualStyleBackColor = false;
             this.btnSelectNoneRemoteTargets.Click += new System.EventHandler(this.btnSelectNoneRemoteTargets_Click);
             
-            // panelStatus
             this.panelStatus.BackColor = System.Drawing.Color.White;
             this.panelStatus.Controls.Add(this.lblStatus);
             this.panelStatus.Dock = System.Windows.Forms.DockStyle.Bottom;
@@ -396,7 +355,6 @@ namespace MacroRecorderGUI
             this.panelStatus.Size = new System.Drawing.Size(700, 70);
             this.panelStatus.TabIndex = 3;
             
-            // lblStatus
             this.lblStatus.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lblStatus.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
             this.lblStatus.Location = new System.Drawing.Point(0, 0);
@@ -406,7 +364,6 @@ namespace MacroRecorderGUI
             this.lblStatus.Text = "● ГОТОВ К РАБОТЕ";
             this.lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             
-            // panelLogs
             this.panelLogs.BackColor = System.Drawing.Color.White;
             this.panelLogs.Controls.Add(this.txtLogs);
             this.panelLogs.Controls.Add(this.lblLogsTitle);
@@ -414,10 +371,9 @@ namespace MacroRecorderGUI
             this.panelLogs.Location = new System.Drawing.Point(700, 0);
             this.panelLogs.Name = "panelLogs";
             this.panelLogs.Size = new System.Drawing.Size(400, 670);
-            this.panelLogs.Visible = true; // Видимость управляется в коде
+            this.panelLogs.Visible = true;
             this.panelLogs.TabIndex = 5;
             
-            // txtLogs
             this.txtLogs.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
             this.txtLogs.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txtLogs.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -431,7 +387,6 @@ namespace MacroRecorderGUI
             this.txtLogs.TabIndex = 1;
             this.txtLogs.Text = "";
             
-            // lblLogsTitle
             this.lblLogsTitle.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(33)))), ((int)(((byte)(150)))), ((int)(((byte)(243)))));
             this.lblLogsTitle.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblLogsTitle.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
@@ -443,7 +398,6 @@ namespace MacroRecorderGUI
             this.lblLogsTitle.Text = "ЛОГИ";
             this.lblLogsTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             
-            // panelSettings
             this.panelSettings = new System.Windows.Forms.Panel();
             this.panelSettings.BackColor = System.Drawing.Color.White;
             this.panelSettings.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -453,7 +407,6 @@ namespace MacroRecorderGUI
             this.panelSettings.Visible = false;
             this.panelSettings.TabIndex = 7;
             
-            // panelMain
             this.panelMain.BackColor = System.Drawing.Color.White;
             this.panelMain.Controls.Add(this.panelPlayback);
             this.panelMain.Controls.Add(this.panelRecording);
@@ -465,7 +418,6 @@ namespace MacroRecorderGUI
             this.panelMain.Size = new System.Drawing.Size(700, 670);
             this.panelMain.TabIndex = 6;
             
-            // MainForm
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(1100, 810);
             this.Controls.Add(this.panelSettings);

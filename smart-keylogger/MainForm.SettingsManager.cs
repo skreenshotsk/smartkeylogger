@@ -1,4 +1,3 @@
-// MainForm.SettingsManager.cs - Управление UI настроек
 using System;
 using System.Windows.Forms;
 
